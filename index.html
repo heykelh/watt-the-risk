@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WATT THE RISK?!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+/* VOICE: arcade NES, malicieux mais expert, le métier du costing énergie raconté en jeu
+   IDEA: une borne d'arcade qui transforme une fiche de chiffrage en partie à roues
+   PICTURE: skyline pixel de nuit, éoliennes, courbe de prix néon, roues à ampoules
+   COLOUR and TYPE: palette de saison qui change à chaque dossier; Press Start 2P + VT323
+   LAYOUT: écran titre plein cadre, puis une colonne de cartes de jeu, roues en rangée */
+@property --bg{syntax:'<color>';inherits:true;initial-value:#0b1030}
+@property --a1{syntax:'<color>';inherits:true;initial-value:#39d0ff}
+@property --a2{syntax:'<color>';inherits:true;initial-value:#ff3fa4}
+@property --a3{syntax:'<color>';inherits:true;initial-value:#ffd23f}
+:root{color-scheme:dark;--bg:#0b1030;--a1:#39d0ff;--a2:#ff3fa4;--a3:#ffd23f;--ink:#f4f1ff;--mut:#b9b4d6;--card:rgba(10,8,30,.72);--ok:#7cff6b;--ko:#ff4d6d;
+transition:--bg 1.2s,--a1 1.2s,--a2 1.2s,--a3 1.2s}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;background:var(--bg);color:var(--ink);overflow-x:clip}
+body{font:22px/1.25 'VT323',monospace;min-height:100vh;background:radial-gradient(ellipse at 50% -10%,color-mix(in srgb,var(--a1) 30%,transparent),transparent 60%),radial-gradient(ellipse at 100% 100%,color-mix(in srgb,var(--a2) 22%,transparent),transparent 55%),var(--bg)}
+.px{font-family:'Press Start 2P',monospace;letter-spacing:0}
+button{font:12px/1.3 'Press Start 2P',monospace;color:#120c22;background:var(--a3);border:0;padding:14px 18px;min-height:44px;cursor:pointer;box-shadow:0 4px 0 color-mix(in srgb,var(--a3) 45%,#000),0 0 0 3px #120c22;transition:transform .08s}
+button:hover{filter:brightness(1.12)}button:active{transform:translateY(3px);box-shadow:0 1px 0 #000,0 0 0 3px #120c22}
+button:focus-visible,input:focus-visible{outline:3px solid var(--a1);outline-offset:3px}
+button.alt{background:var(--a1);box-shadow:0 4px 0 color-mix(in srgb,var(--a1) 45%,#000),0 0 0 3px #120c22}
+button.ghost{background:transparent;color:var(--ink);box-shadow:0 0 0 3px var(--mut)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.crt{pointer-events:none;position:fixed;inset:0;z-index:50;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+.vig{pointer-events:none;position:fixed;inset:0;z-index:49;box-shadow:inset 0 0 160px rgba(0,0,0,.7)}
+.screen{display:none}.screen.on{display:block;animation:fade .5s}
+@keyframes fade{from{opacity:0;transform:scale(.985)}to{opacity:1}}
+/* TITLE */
+#title{position:relative;min-height:100vh;overflow:hidden}
+#tc{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;object-fit:cover;object-position:50% 100%}
+.tbox{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:18px;padding:9vh 16px 120px;text-align:center}
+.logo{font-family:'Press Start 2P';font-size:clamp(28px,7.4vw,84px);line-height:1.1;margin:0;filter:drop-shadow(0 6px 0 #120c22) drop-shadow(0 0 22px rgba(255,255,255,.25))}
+.logo span{display:inline-block;animation:wave 1.6s ease-in-out infinite,hue 6s linear infinite}
+@keyframes wave{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes hue{0%{color:#39d0ff}20%{color:#ff3fa4}40%{color:#ffd23f}60%{color:#7cff6b}80%{color:#ff7a1e}100%{color:#39d0ff}}
+.sub{font-family:'Press Start 2P';font-size:clamp(10px,1.6vw,15px);color:#fff;background:#120c22cc;padding:10px 14px;box-shadow:0 0 0 3px var(--a2)}
+.blink{animation:blk 1s steps(2) infinite;font-family:'Press Start 2P';font-size:13px;color:var(--a3)}
+@keyframes blk{50%{opacity:0}}
+.tbtns{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin-top:8px}
+#start{font-size:18px;padding:18px 28px}
+.ticker{position:absolute;bottom:0;left:0;right:0;z-index:3;background:#120c22;border-top:3px solid var(--a1);overflow:hidden;white-space:nowrap;height:44px;display:flex;align-items:center}
+.ticker div{display:inline-block;padding-left:100%;animation:tick 60s linear infinite;color:var(--a3)}
+@keyframes tick{to{transform:translateX(-100%)}}
+.lang{position:absolute;top:14px;right:14px;z-index:4}
+.credit{position:absolute;bottom:54px;left:0;right:0;z-index:3;text-align:center;font-size:18px;color:#ddd;text-shadow:0 2px 0 #000}
+/* GAME */
+.wrap{max-width:1180px;margin:0 auto;padding:18px max(3vw,12px) 60px}
+.hud{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;background:#120c22e6;box-shadow:0 0 0 3px var(--a1);padding:12px 14px;position:sticky;top:8px;z-index:20}
+.hud .px{font-size:11px}.hud b{color:var(--a3)}
+.tools{display:flex;gap:6px}.tool{font:9px 'Press Start 2P';padding:6px 7px;background:#ffffff14;color:var(--mut)}.tool.on{background:var(--a1);color:#120c22}
+.card{background:var(--card);box-shadow:0 0 0 3px color-mix(in srgb,var(--a2) 70%,#000),8px 8px 0 #0008;padding:18px;margin-top:22px;backdrop-filter:blur(3px)}
+.card h2{font:15px/1.4 'Press Start 2P';margin:0 0 12px;color:var(--a1)}
+.card h3{font:11px/1.4 'Press Start 2P';margin:14px 0 8px;color:var(--a3)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+@media(max-width:820px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.brief{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:560px){.brief{grid-template-columns:minmax(0,1fr)}}
+.npc{width:120px;height:120px;image-rendering:pixelated;background:#ffffff10;box-shadow:0 0 0 3px var(--a3)}
+.quote{background:#fff;color:#120c22;padding:10px 12px;position:relative;margin-top:8px}
+.tag{display:inline-block;font:9px 'Press Start 2P';padding:6px 8px;margin:0 6px 6px 0;background:#ffffff1c;color:var(--ink)}
+.season{font:10px 'Press Start 2P';color:#120c22;background:var(--a3);padding:5px 8px}
+.ctl{margin:14px 0}.ctl label{display:flex;justify-content:space-between;gap:10px}.ctl label b{color:var(--a3)}
+input[type=range]{width:100%;height:44px;accent-color:var(--a2);background:transparent}
+.hint{color:var(--mut);font-size:19px}
+.stack{display:flex;height:34px;box-shadow:0 0 0 3px #120c22;margin:10px 0}
+.stack i{display:block;height:100%;transition:width .3s}
+.leg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;font-size:20px}
+.leg span:nth-child(even){text-align:right;white-space:nowrap}
+.dot{display:inline-block;width:12px;height:12px;margin-right:8px;vertical-align:middle}
+.price{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-top:10px}
+.big{font:clamp(22px,3.4vw,34px) 'Press Start 2P';color:var(--a3);text-shadow:3px 3px 0 #120c22}
+.gauge{height:22px;background:#ffffff18;box-shadow:0 0 0 3px #120c22;margin-top:6px}.gauge i{display:block;height:100%;transition:width .3s,background .3s}
+.risk{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+.risk div{background:#ffffff10;padding:8px;text-align:center}.risk b{display:block;font:12px 'Press Start 2P';color:var(--a1);margin-top:4px;white-space:nowrap}
+@media(max-width:520px){.risk{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.locked{color:var(--mut);border:2px dashed #ffffff40;padding:10px}
+.wheels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media(max-width:900px){.wheels{grid-template-columns:minmax(0,1fr)}}
+.wheel{display:flex;flex-direction:column;align-items:center}
+.wheel h3{text-align:center}
+.wheel{position:relative;padding:14px 8px 10px;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--a1) 22%,transparent),transparent 62%),radial-gradient(ellipse at 50% 100%,#0b3a24 0,#06170f 70%);box-shadow:inset 0 0 0 3px #b8860b,inset 0 0 0 6px #120c22,inset 0 0 40px #000}
+.wheel canvas{width:min(310px,82vw);height:min(310px,82vw)}
+.wheel h3{background:linear-gradient(90deg,#7a5512,#ffe58a,#b8860b);color:#2a1a00!important;padding:6px 10px;margin:0 0 6px!important}
+.wl div.bonus{background:linear-gradient(90deg,#ffd70033,transparent)}.wl div.malus{background:linear-gradient(90deg,#ff2a4a33,transparent)}.wl div.malus .dot{box-shadow:0 0 0 2px #ff2a4a}.wl div.bonus .dot{box-shadow:0 0 6px #ffd700}
+.wl div.hit{background:var(--a3)!important;color:#120c22}
+.shake{animation:shk .5s}@keyframes shk{20%{transform:translateX(-8px) rotate(-1deg)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.glow{animation:glw 1.2s}@keyframes glw{30%{box-shadow:inset 0 0 0 3px #ffd700,0 0 40px #ffd700}}
+.wl{width:100%;font-size:19px;margin-top:8px}
+.wl div{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:6px;align-items:center;padding:2px 4px}
+.wl div.hit{background:var(--a3);color:#120c22}
+.wl small{font-size:17px;opacity:.85}
+.stamp{font:clamp(22px,5vw,44px) 'Press Start 2P';text-align:center;padding:18px;margin:8px 0;animation:stamp .5s cubic-bezier(.2,2,.4,1)}
+@keyframes stamp{from{transform:scale(3) rotate(-12deg);opacity:0}}
+.ok{color:var(--ok)}.ko{color:var(--ko)}
+table{width:100%;border-collapse:collapse;font-size:20px}td,th{padding:6px 8px;border-bottom:1px solid #ffffff22;text-align:left}td:last-child,th:last-child{text-align:right;white-space:nowrap}
+.fact{background:color-mix(in srgb,var(--a1) 18%,#120c22);box-shadow:0 0 0 3px var(--a1);padding:14px;margin-top:16px}
+.fact .px{font-size:10px;color:var(--a1);display:block;margin-bottom:8px}
+.qopts{display:grid;gap:10px;margin-top:10px}.qopts button{text-align:left;font-size:11px;line-height:1.5;background:#ffffff18;color:var(--ink);box-shadow:0 0 0 2px #ffffff40}
+.qopts button.good{background:var(--ok);color:#120c22}.qopts button.bad{background:var(--ko);color:#120c22}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:16px}
+/* MODALS */
+.modal{position:fixed;inset:0;z-index:40;background:#05031099;display:none;align-items:center;justify-content:center;padding:14px}
+.modal.on{display:flex;animation:fade .3s}
+.mbox{background:#140f2b;box-shadow:0 0 0 4px var(--a2),10px 10px 0 #000;max-width:860px;width:100%;max-height:88vh;overflow:auto;padding:20px}
+.mbox h2{font:15px/1.4 'Press Start 2P';color:var(--a3);margin:0 0 14px}
+.mclose{float:right;font-size:10px;padding:10px 12px}
+.gl{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:12px}
+.gl div{background:#ffffff0e;padding:10px 12px}.gl b{font:10px/1.6 'Press Start 2P';color:var(--a1)}
+#gq{width:100%;font:20px 'VT323';padding:10px;background:#0c0820;color:var(--ink);border:3px solid var(--a1);min-height:44px}
+.upg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px}
+.upg button{display:block;text-align:left;font-size:10px;line-height:1.6;padding:16px;background:#ffffff14;color:var(--ink);box-shadow:0 0 0 3px var(--a1)}
+.upg button span{display:block;font:19px/1.2 'VT323';color:var(--mut);margin-top:8px}
+.banner{position:fixed;inset:0;z-index:45;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:var(--bg);text-align:center;padding:16px}
+.banner.on{display:flex}
+.banner .px:first-child{font-size:clamp(28px,7vw,70px);color:var(--a3);animation:slide .9s cubic-bezier(.2,1.4,.4,1)}
+.banner .px+.px{font-size:clamp(11px,2vw,16px);color:var(--a1)}
+@keyframes slide{from{transform:translateX(-120vw)}}
+.fig{position:relative;min-height:300px;margin-top:10px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.kpis div{background:#ffffff10;padding:12px;text-align:center}.kpis b{display:block;font:clamp(13px,2vw,18px) 'Press Start 2P';color:var(--a3);margin-top:6px}
+@media(max-width:620px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rank{font:clamp(16px,3vw,26px)/1.4 'Press Start 2P';color:var(--a1);text-align:center;margin:18px 0 6px}
+.src{font-size:18px;color:var(--mut)}.src a{color:var(--a1)}
+.qs{margin:10px 0;padding-left:22px}.qs li{margin:8px 0}.qs li::marker{content:'? ';color:var(--a3);font-family:'Press Start 2P';font-size:12px}
+details.how{margin-top:10px;background:#ffffff0c;padding:10px 12px}details.how summary{font:11px/1.6 'Press Start 2P';color:var(--a1);cursor:pointer;min-height:32px}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:12px;margin-top:12px}.step b{font:16px 'Press Start 2P';color:#120c22;background:var(--a3);display:flex;align-items:center;justify-content:center;height:44px}
+.fml{font-family:'Press Start 2P';font-size:10px;line-height:1.8;background:#120c22;padding:8px 10px;color:var(--a3);display:inline-block;margin:4px 0}
+.fig.mini{min-height:150px}
+.dash{display:grid;gap:8px}.dash div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;background:#ffffff0e;padding:8px 10px;align-items:center}
+.dash b{white-space:nowrap;color:var(--a1)}.dash small{grid-column:1/-1;color:var(--mut);font-size:18px}
+.why{background:#ffffff0e;padding:12px;margin-top:12px}
+.stage{min-height:calc(100svh - 110px);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px 0 30px}
+.stage.anim .panel{animation:pin .45s cubic-bezier(.2,1.2,.4,1)}@keyframes pin{from{opacity:0;transform:translateY(24px) scale(.98)}}
+.panel{width:min(760px,100%);margin-top:0}
+.panel>p{margin:10px 0}
+.nav{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-top:22px}.nav.center{justify-content:center}
+.minis{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+button.sm{font-size:9px;padding:10px 12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:12px}
+.tile{background:#ffffff10;padding:12px;box-shadow:inset 0 0 0 2px #ffffff18}.tile span{display:block;color:var(--mut);font-size:19px}.tile b{display:block;font:13px/1.5 'Press Start 2P';color:var(--a3);margin-top:6px}
+.dots{display:flex;gap:4px}.dots i{width:9px;height:9px;background:#ffffff2a}.dots i.done{background:var(--a1)}.dots i.on{background:var(--a3);box-shadow:0 0 8px var(--a3)}
+.evcard{background:color-mix(in srgb,var(--a1) 16%,#120c22);box-shadow:0 0 0 3px var(--a1);padding:14px;margin-top:14px}.evcard.alt{background:color-mix(in srgb,var(--a2) 16%,#120c22);box-shadow:0 0 0 3px var(--a2)}
+.evcard .px{display:block;font-size:12px;color:var(--a3);margin-bottom:8px}
+.lineup{padding-left:28px;margin:8px 0}.lineup li{margin:6px 0}
+.flash{text-align:center;padding:10px}.flash .px{display:inline-block;font-size:11px;background:var(--ko);color:#fff;padding:8px 10px;animation:blk 1s steps(2) 3}.flash h2{font-size:clamp(14px,3vw,22px)!important;margin:18px 0!important;color:var(--a3)!important}
+.evnote{color:var(--a3);border-left:4px solid var(--a3);padding-left:10px}
+.bigwheel{margin:12px auto 0;width:100%;max-width:480px}
+.bigwheel canvas{width:min(420px,84vw);height:min(420px,84vw)}
+.landcard{margin:16px auto 0;max-width:520px;text-align:center;padding:14px;background:#120c22;box-shadow:0 0 0 3px var(--a1);animation:stamp .45s cubic-bezier(.2,2,.4,1)}
+.landcard .px{display:block;font-size:14px;color:var(--a1);margin-bottom:8px}.landcard b{display:block;font-size:22px}.landcard small{display:block;color:var(--mut);font-size:19px;margin-top:4px}
+.landcard.bonus{box-shadow:0 0 0 3px #ffd700,0 0 30px #ffd70088}.landcard.bonus .px{color:#ffd700}.landcard.malus{box-shadow:0 0 0 3px #ff2a4a,0 0 30px #ff2a4a88}.landcard.malus .px{color:#ff2a4a}
+.verdict{font-size:23px}
+#mInfo .wl div{grid-template-columns:16px minmax(0,1fr) auto}
+.ctl label b{white-space:nowrap}
+@media(max-width:600px){
+ body{font-size:20px}
+ .lang{top:10px;right:10px;font-size:10px;padding:10px}
+ .tbox{padding:12vh 12px 130px;gap:14px}
+ .tbtns{flex-direction:column;align-items:stretch;width:min(320px,100%)}
+ #start{font-size:20px;padding:20px}
+ .credit{font-size:16px;padding:0 10px}
+ .wrap{padding:10px 10px 40px}
+ .hud{position:sticky;top:0;padding:8px 10px;gap:6px 10px;box-shadow:0 0 0 2px var(--a1)}
+ .hud .tools{display:none}
+ .hud .row{flex-wrap:nowrap;margin-left:auto}.hud .row button{min-height:36px;padding:8px!important;font-size:8px!important}
+ .logo{font-size:clamp(34px,10vw,52px)}
+ .card{padding:14px 12px;margin-top:16px;box-shadow:0 0 0 2px color-mix(in srgb,var(--a2) 70%,#000),4px 4px 0 #0008}
+ .card h2{font-size:12px}
+ .brief{grid-template-columns:72px minmax(0,1fr);gap:12px}.npc{width:72px;height:72px}
+ .quote{font-size:19px}
+ .dash div{grid-template-columns:minmax(0,1fr)}.dash b{justify-self:start;font-size:22px}
+ .leg{font-size:18px}
+ .wheels{gap:8px}
+ .wheel canvas{width:min(270px,76vw);height:min(270px,76vw)}
+ .wl{font-size:17px}.wl small{font-size:15px}
+ table{font-size:17px}td,th{padding:5px 4px}td:last-child,th:last-child{white-space:normal}
+ .why p{font-size:18px}.fml{font-size:8px}
+ .qopts button{font-size:10px;padding:12px}
+ .row button{flex:1 1 100%}
+ .kpis b{font-size:13px}
+ .mbox{padding:14px;max-height:92vh}
+ .stamp{padding:10px}
+}
+@media(max-width:600px){.fig.mini{min-height:110px}.panel>p{margin:6px 0}.bigwheel canvas{width:min(360px,88vw);height:min(360px,88vw)}.stage{min-height:calc(100svh - 90px)}.tile b{font-size:11px}.hud .dots{order:5;width:100%}.verdict{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.logo span,.ticker div,.blink{animation:none}}
+</style>
+</head>
+<body>
+<div class="crt"></div><div class="vig"></div>
+
+<section id="title" class="screen on">
+  <canvas id="tc" width="320" height="180"></canvas>
+  <button class="ghost lang" id="langBtn">EN</button>
+  <div class="tbox">
+    <h1 class="logo" id="logo" aria-label="WATT THE RISK?!"></h1>
+    <div class="sub" data-fr="Le jeu du costing énergie : chiffre, couvre, backteste" data-en="The energy costing game: price it, hedge it, backtest it"></div>
+    <div class="blink" data-fr="INSÈRE UN KILOWATT" data-en="INSERT ONE KILOWATT"></div>
+    <div class="tbtns">
+      <button id="start">START</button>
+      <button class="alt" id="howBtn" data-fr="COMMENT JOUER" data-en="HOW TO PLAY"></button>
+      <button class="alt" id="glossBtn" data-fr="GLOSSAIRE" data-en="GLOSSARY"></button>
+    </div>
+  </div>
+  <div class="credit" data-fr="Un jeu de Heykel Hachiche · projet indépendant, non affilié à EDF" data-en="A game by Heykel Hachiche · independent project, not affiliated with EDF"></div>
+  <div class="ticker"><div id="tickTxt"></div></div>
+</section>
+
+<section id="game" class="screen">
+  <div class="wrap">
+    <div class="hud">
+      <span class="px"><span data-fr="DOSSIER" data-en="DEAL"></span> <b id="hR">1/6</b></span>
+      <span class="season" id="hS"></span>
+      <span class="px">P&amp;L <b id="hP">0 k€</b></span>
+      <span class="dots" id="dots"></span>
+      <span class="tools" id="hT"></span>
+      <span class="row hbtn" style="margin:0;gap:8px">
+        <button class="ghost" id="g2" style="font-size:9px;padding:8px 10px" data-fr="GLOSSAIRE" data-en="GLOSSARY"></button>
+        <button class="ghost" id="snd" style="font-size:9px;padding:8px 10px">SON ON</button>
+      </span>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+</section>
+
+<section id="report" class="screen">
+  <div class="wrap">
+    <div class="card">
+      <h2 data-fr="RAPPORT ANNUEL DE BACKTESTING" data-en="ANNUAL BACKTESTING REPORT"></h2>
+      <div class="kpis" id="kpis"></div>
+      <div class="rank" id="rank"></div>
+      <p class="hint" style="text-align:center" id="rankTxt"></p>
+      <h3 data-fr="MARK-UP PROVISIONNÉ VS RISQUE RÉALISÉ (€/MWh)" data-en="PROVISIONED MARK-UP VS REALISED RISK (€/MWh)"></h3>
+      <div class="fig"><svg id="chart"></svg></div>
+      <p class="hint" data-fr="Une barre rouge plus haute que la barre bleue : le risque a mangé la provision. Les dossiers non signés sont rejoués en simulé, comme dans un vrai backtest." data-en="A red bar taller than the blue one: risk ate the provision. Unsigned deals are replayed as a simulation, as in a real backtest."></p>
+      <div id="tbl"></div>
+      <div class="row"><button id="again" data-fr="REJOUER" data-en="PLAY AGAIN"></button><button class="alt" id="g3" data-fr="GLOSSAIRE" data-en="GLOSSARY"></button></div>
+      <h3 data-fr="DONNÉES PUBLIQUES UTILISÉES" data-en="PUBLIC DATA USED"></h3>
+      <p class="src" id="srcs"></p>
+    </div>
+  </div>
+</section>
+
+<div class="modal" id="mHow"><div class="mbox"><button class="ghost mclose" data-close>X</button><h2 data-fr="COMMENT JOUER" data-en="HOW TO PLAY"></h2><div id="howTxt"></div></div></div>
+<div class="modal" id="mGl"><div class="mbox"><button class="ghost mclose" data-close>X</button><h2 data-fr="GLOSSAIRE DU COSTING" data-en="COSTING GLOSSARY"></h2><input id="gq" type="search" autocomplete="off"><div class="gl" id="glList"></div></div></div>
+<div class="modal" id="mUp"><div class="mbox"><h2 data-fr="NOUVEL OUTIL DÉBLOQUÉ" data-en="NEW TOOL UNLOCKED"></h2><p class="hint" data-fr="Ton équipe te laisse du temps pour automatiser. Choisis un outil : il révèle des informations pour les dossiers suivants." data-en="Your team gives you time to automate. Pick a tool: it reveals information for the next deals."></p><div class="upg" id="upg"></div></div></div>
+<div class="modal" id="mInfo"><div class="mbox"><button class="ghost mclose" data-close>X</button><h2 id="iT"></h2><div id="iB"></div></div></div>
+<div class="banner" id="ban"><div class="px" id="banA"></div><div class="px" id="banB"></div></div>
+
+<script>
+{
+let L='fr';
+const t=o=>o==null?'':typeof o==='string'?o:(o[L]??o.fr);
+const $=id=>document.getElementById(id);
+const F=62, COMM=9, PRIME=0.8;
+const fmt=(n,d=1)=>n.toLocaleString(L==='fr'?'fr-FR':'en-GB',{minimumFractionDigits:d,maximumFractionDigits:d});
+const keur=k=>Math.abs(k)>=1000?fmt(k/1000,2)+' M€':fmt(k,0)+' k€';
+
+/* ---------- PALETTES ---------- */
+const PAL=[
+ {bg:'#0b1030',a1:'#39d0ff',a2:'#ff3fa4',a3:'#ffd23f'},
+ {bg:'#05261f',a1:'#19e3a1',a2:'#ff7ab6',a3:'#fff35c'},
+ {bg:'#2a0d18',a1:'#2de2e6',a2:'#ff8a1e',a3:'#ffe14d'},
+ {bg:'#1d0b24',a1:'#c58bff',a2:'#ff6b3d',a3:'#ffd166'},
+ {bg:'#06142a',a1:'#7cf3ff',a2:'#ff4d6d',a3:'#b6ff3b'},
+ {bg:'#101a08',a1:'#4dc3ff',a2:'#ff5ec8',a3:'#a6ff4d'}];
+const setPal=i=>{const p=PAL[i],r=document.documentElement.style;r.setProperty('--bg',p.bg);r.setProperty('--a1',p.a1);r.setProperty('--a2',p.a2);r.setProperty('--a3',p.a3)};
+
+/* ---------- WHEELS DATA (10 slices each) ---------- */
+const BW={fr:'★BONUS',en:'★BONUS'},MW={fr:'PIÈGE',en:'TRAP'};
+const wheel=order=>{const cnt=new Map();order.forEach(s=>cnt.set(s,(cnt.get(s)||0)+1));return order.map(s=>({...s,w:s.w/cnt.get(s),base:s}))};
+const WB={s:BW,n:{fr:'Bonus : effacements rémunérés à la pointe',en:'Bonus: paid demand response at peak'},w:.06,v:0,p:0,b:-3,t:'bonus'};
+const W1={s:{fr:'DOUX',en:'MILD'},n:{fr:'Saison douce',en:'Mild season'},w:.20,v:-.05,p:-.15,c:'#ff4fa3'},
+ W2={s:{fr:'NORMAL',en:'NORMAL'},n:{fr:'Saison normale',en:'Normal season'},w:.28,v:0,p:0,c:'#1e9bff'},
+ W3={s:{fr:'VENTEUX',en:'WINDY'},n:{fr:'Saison venteuse',en:'Windy season'},w:.10,v:0,p:-.10,c:'#17c37b'},
+ W4={s:{fr:'FROID',en:'COLD'},n:{fr:'Vague de froid',en:'Cold snap'},w:.20,v:.08,p:.45,c:'#9b30ff'},
+ W5={s:{fr:'NI VENT',en:'NO WIND'},n:{fr:'Ni vent ni soleil',en:'No wind, no sun'},w:.10,v:.02,p:.30,c:'#e8173c'},
+ W6={s:MW,n:{fr:'Piège : pointe record à 19 h',en:'Trap: record 7 p.m. peak'},w:.06,v:.10,p:.70,t:'malus'};
+const M1={s:{fr:'NORMAL',en:'NORMAL'},n:{fr:'Saison normale',en:'Normal season'},w:.30,v:0,p:0,c:'#1e9bff'},
+ M2={s:{fr:'VENTEUX',en:'WINDY'},n:{fr:'Soleil et vent en masse',en:'Plenty of sun and wind'},w:.24,v:-.02,p:-.25,c:'#17c37b'},
+ M3={s:{fr:'GEL',en:'FROST'},n:{fr:'Coup de froid tardif',en:'Late cold spell'},w:.10,v:.05,p:.25,c:'#00b8c4'},
+ M4={s:{fr:'PLUIE',en:'RAIN'},n:{fr:'Saison pluvieuse',en:'Rainy season'},w:.09,v:.01,p:-.05,c:'#9b30ff'},
+ M5={s:{fr:'NI VENT',en:'NO WIND'},n:{fr:'Ni vent ni soleil',en:'No wind, no sun'},w:.15,v:.01,p:.20,c:'#e8173c'},
+ M6={s:MW,n:{fr:'Piège : gel tardif record',en:'Trap: record late frost'},w:.06,v:.08,p:.50,t:'malus'};
+const E1={s:{fr:'NORMAL',en:'NORMAL'},n:{fr:'Été de saison',en:'Normal summer'},w:.30,v:0,p:0,c:'#1e9bff'},
+ E2={s:{fr:'CHAUD',en:'HOT'},n:{fr:'Canicule',en:'Heatwave'},w:.20,v:.03,p:.20,c:'#ff8c00'},
+ E3={s:{fr:'PRIX<0',en:'PRICE<0'},n:{fr:'Soleil à gogo, prix négatifs',en:'Solar glut, negative prices'},w:.24,v:-.01,p:-.30,c:'#17c37b'},
+ E4={s:{fr:'ORAGES',en:'STORMS'},n:{fr:'Été orageux',en:'Stormy summer'},w:.14,v:0,p:.05,c:'#9b30ff'},
+ E5={s:MW,n:{fr:'Piège : canicule et centrales bridées',en:'Trap: heatwave and curtailed plants'},w:.06,v:.05,p:.60,t:'malus'};
+const WX={winter:wheel([W2,W4,W1,WB,W5,W2,W4,W3,W6,W1]),mid:wheel([M1,M2,M5,WB,M3,M1,M2,M4,M6,M5]),summer:wheel([E1,E2,E3,WB,E4,E1,E2,E3,E5,E4])};
+const K1={s:{fr:'CALME',en:'CALM'},n:{fr:'Marché calme',en:'Calm market'},w:.31,p:0,c:'#1e9bff'},
+ K2={s:{fr:'BAISSE',en:'DOWN'},n:{fr:'Forwards en baisse',en:'Forwards falling'},w:.18,p:-.15,c:'#17c37b'},
+ K3={s:{fr:'TENSION',en:'TENSION'},n:{fr:'Tension géopolitique',en:'Geopolitical tension'},w:.12,p:.25,c:'#ff8c00'},
+ K4={s:{fr:'GAZ',en:'GAS'},n:{fr:'Gaz en flambée',en:'Gas price spike'},w:.10,p:.45,c:'#e8173c'},
+ K5={s:{fr:'MIDI<0',en:'NOON<0'},n:{fr:'Prix négatifs à midi',en:'Negative prices at noon'},w:.12,p:-.10,c:'#00b8c4'},
+ K6={s:{fr:'CRISE',en:'CRISIS'},n:{fr:'Crise type 2022',en:'2022-style crisis'},w:.05,p:1.5,c:'#9b30ff'},
+ K7={s:BW,n:{fr:'Bonus : l\'équipe achète au plus bas',en:'Bonus: the team buys at the low'},w:.06,p:0,b:-2.5,t:'bonus'},
+ K8={s:MW,n:{fr:'Piège : écarts de prévision pénalisés',en:'Trap: penalised forecast imbalances'},w:.06,p:0,b:3,t:'malus'};
+const MK=wheel([K1,K2,K3,K7,K5,K1,K2,K4,K8,K6]);
+const C1={s:{fr:'STABLE',en:'STABLE'},n:{fr:'Portefeuille stable',en:'Stable portfolio'},w:.32,v:0,c:'#1e9bff'},
+ C2={s:{fr:'VE',en:'EV'},n:{fr:'Boom des véhicules électriques',en:'Electric vehicle boom'},w:.13,v:.06,k:'ev',c:'#00b8c4'},
+ C3={s:{fr:'DÉPARTS',en:'CHURN'},n:{fr:'Départs de clients',en:'Clients leaving'},w:.14,v:-.12,c:'#e8173c'},
+ C4={s:{fr:'SOBRE',en:'SAVING'},n:{fr:'Sobriété énergétique',en:'Energy saving'},w:.14,v:-.06,c:'#17c37b'},
+ C5={s:{fr:'SOLAIRE',en:'SOLAR'},n:{fr:'Autoconsommation en hausse',en:'More self-consumption'},w:.15,v:-.05,k:'sol',c:'#ff8c00'},
+ C6={s:BW,n:{fr:'Bonus : clients fidèles, coûts commerciaux en baisse',en:'Bonus: loyal clients, lower commercial costs'},w:.06,v:0,b:-2,t:'bonus'},
+ C7={s:MW,n:{fr:'Piège : impayés en hausse',en:'Trap: unpaid bills rising'},w:.06,v:0,b:2.5,t:'malus'};
+const CL=wheel([C1,C2,C3,C6,C5,C1,C2,C4,C7,C5]);
+
+/* ---------- YEAR CONTEXT & EVENTS (each game differs) ---------- */
+const YR=[{n:{fr:'MARCHÉ DÉTENDU',en:'RELAXED MARKET'},d:{fr:'Forward électricité à 54 €/MWh, gaz à 30 €/MWh. Les prix sont bas, les marges en euros sont plus fines.',en:'Power forward at 54 €/MWh, gas at 30 €/MWh. Prices are low, margins in euros are thinner.'},F:54,Fg:30},
+ {n:{fr:'MARCHÉ NORMAL',en:'NORMAL MARKET'},d:{fr:'Forward électricité à 62 €/MWh (proche du spot moyen 2025), gaz à 35 €/MWh.',en:'Power forward at 62 €/MWh (close to the 2025 average spot), gas at 35 €/MWh.'},F:62,Fg:35},
+ {n:{fr:'MARCHÉ TENDU',en:'TIGHT MARKET'},d:{fr:'Forward électricité à 74 €/MWh, gaz à 44 €/MWh. Chaque choc de prix pèse plus lourd.',en:'Power forward at 74 €/MWh, gas at 44 €/MWh. Every price shock weighs more.'},F:74,Fg:44}];
+const CP=[{n:{fr:'CONCURRENCE AGRESSIVE',en:'AGGRESSIVE COMPETITION'},d:{fr:'Les fournisseurs se battent pour chaque client : les prix du marché sont plus bas.',en:'Suppliers fight for every client: market prices are lower.'},c:-1},
+ {n:{fr:'CONCURRENCE NORMALE',en:'NORMAL COMPETITION'},d:{fr:'Les concurrents restent dans leurs habitudes.',en:'Competitors stick to their habits.'},c:0},
+ {n:{fr:'CONCURRENCE SAGE',en:'CALM COMPETITION'},d:{fr:'Les concurrents protègent leurs marges : un peu plus de place pour ton mark-up.',en:'Competitors protect their margins: a bit more room for your mark-up.'},c:1}];
+const EVT=[
+ {n:{fr:'PROMO CONCURRENTE',en:'COMPETITOR PROMO'},d:{fr:'Un concurrent casse ses prix sur ce segment : le prix du marché baisse de 1,5 €/MWh pour ce dossier.',en:'A competitor slashes prices on this segment: the market price drops 1.5 €/MWh for this deal.'},a:d=>{d.comp-=1.5}},
+ {n:{fr:'CONCURRENT EN DIFFICULTÉ',en:'COMPETITOR IN TROUBLE'},d:{fr:'Un fournisseur réduit son activité : le prix du marché monte de 1,5 €/MWh pour ce dossier.',en:'A supplier scales back: the market price rises 1.5 €/MWh for this deal.'},a:d=>{d.comp+=1.5}},
+ {n:{fr:'CAPACITÉ PLUS CHÈRE',en:'PRICIER CAPACITY'},d:{fr:'Le coût de capacité (ou de stockage pour le gaz) augmente de 2 €/MWh pour ce dossier, pour toi comme pour la concurrence.',en:'Capacity cost (or storage for gas) rises 2 €/MWh for this deal, for you and competitors alike.'},a:d=>{d.cap+=2}},
+ {n:{fr:'FORWARDS EN DÉTENTE',en:'FORWARDS EASING'},d:{fr:'Les prix à terme reculent de 6 % au moment du chiffrage.',en:'Forward prices fall 6% at pricing time.'},a:d=>{d.fwd*=.94}},
+ {n:{fr:'FORWARDS SOUS TENSION',en:'FORWARDS UNDER STRESS'},d:{fr:'Les prix à terme bondissent de 8 % au moment du chiffrage.',en:'Forward prices jump 8% at pricing time.'},a:d=>{d.fwd*=1.08}},
+ {n:{fr:'GESTE COMMERCIAL PROMIS',en:'DISCOUNT PROMISED'},d:{fr:'Le commercial a promis un geste au client sans te prévenir : +1 €/MWh de coûts sur ce dossier.',en:'Sales promised the client a gesture without telling you: +1 €/MWh of cost on this deal.'},a:d=>{d.extra+=1}},
+ {n:{fr:'NOUVELLES DONNÉES CONSO',en:'NEW CONSUMPTION DATA'},d:{fr:'Le datalake livre de meilleures données : la sensibilité volume de ce client baisse de 40 %.',en:'The datalake delivers better data: this client\'s volume sensitivity drops 40%.'},a:d=>{d.wS*=.6;d.cS*=.6}},
+ {n:{fr:'PRÉVISIONS SAISONNIÈRES',en:'SEASONAL FORECAST'},d:{fr:'Les prévisions annoncent une saison extrême : la sensibilité météo de ce client augmente de 40 %.',en:'Forecasts announce an extreme season: this client\'s weather sensitivity rises 40%.'},a:d=>{d.wS*=1.4}}];
+
+/* ---------- DOSSIER POOL (6 drawn out of 12 each game) ---------- */
+const D=[
+ {name:{fr:'Foyers chauffés à l\'électricité',en:'Electrically heated homes'},tags:[{fr:'Particuliers',en:'Households'},{fr:'Électricité',en:'Power'},{fr:'Prix fixe 2 ans',en:'2-year fixed'},'300 GWh'],
+  who:{fr:'Romain, marketing particuliers',en:'Romain, residential marketing'},col:'#ff3fa4',
+  q:{fr:'« Prix fixe deux ans, chauffage électrique, et le client veut le meilleur prix du marché. Tu peux me sortir ça avant midi ? »',en:'"Two-year fixed price, electric heating, and the client wants the best price on the market. Can you get it to me before noon?"'},
+  why:{fr:'Profil d\'hiver : on consomme surtout quand l\'électricité est chère. Le risque volume et le risque prix vont dans le même sens.',en:'Winter profile: they consume most when power is expensive. Volume risk and price risk move together.'},
+  g:[{fr:'Quand le froid arrive, le volume ET le prix spot montent ensemble. Sur quelle partie de l\'énergie cela te coûte-t-il de l\'argent ?',en:'When cold weather hits, volume AND spot price rise together. On which part of the energy does that cost you money?'},
+   {fr:'Ce client est très sensible à la météo. La part que tu laisses au prix du jour te paraît-elle petite ou grande face à ce risque ?',en:'This client is very weather-sensitive. Does the share left at the day\'s price look small or large given that risk?'},
+   {fr:'Ouvre les tests de résistance : ton mark-up couvre-t-il le scénario froid ? Et ton prix reste-t-il proche de la concurrence ?',en:'Open the stress tests: does your mark-up cover the cold scenario? And is your price still close to competitors?'}],
+  en:'elec',vol:300,prof:1.20,cap:6,go:0,wS:1.6,cS:1,pS:1,ev:1,sol:1,comp:4,sc:2.5},
+ {name:{fr:'Réseau de 120 boulangeries',en:'Chain of 120 bakeries'},tags:[{fr:'Professionnels',en:'Small business'},{fr:'Électricité',en:'Power'},{fr:'Prix fixe 3 ans',en:'3-year fixed'},'40 GWh'],
+  who:{fr:'Inès, ventes entreprises',en:'Inès, business sales'},col:'#ffd23f',
+  q:{fr:'« Ils font du pain à 4 h du matin, ils veulent un prix fixe et zéro surprise. Comme nous, en fait. »',en:'"They bake at 4 a.m., they want a fixed price and zero surprises. Same as us, really."'},
+  why:{fr:'Profil assez plat avec un pic tôt le matin. Trois ans de prix fixe : la couverture compte.',en:'Fairly flat profile with an early-morning peak. Three years fixed: hedging matters.'},
+  g:[{fr:'Profil plutôt plat, peu sensible à la météo : ce dossier a-t-il besoin de la même protection qu\'un foyer chauffé à l\'électricité ?',en:'Fairly flat profile, low weather sensitivity: does this deal need the same protection as an electrically heated home?'},
+   {fr:'Trois ans à prix fixe : si le marché monte, qui paie la différence, toi ou le client ?',en:'Three years fixed: if the market rises, who pays the difference, you or the client?'},
+   {fr:'Dans la roue Marché, quelle case est rare mais très douloureuse ? Combien veux-tu payer pour t\'en protéger ?',en:'On the Market wheel, which slice is rare but very painful? How much will you pay to be protected?'}],
+  en:'elec',vol:40,prof:1.05,cap:4,go:0,wS:.6,cS:1,pS:1,ev:.3,sol:.5,comp:4,sc:2.5},
+ {name:{fr:'Recharge de véhicules électriques la nuit',en:'Overnight EV charging'},tags:[{fr:'Nouvel usage',en:'New use'},{fr:'Heures creuses',en:'Off-peak'},'60 GWh'],
+  who:{fr:'Yanis, offres mobilité',en:'Yanis, mobility offers'},col:'#2de2e6',
+  q:{fr:'« Le client recharge la nuit, donc c\'est gratuit pour nous, non ? Je plaisante. Enfin, à moitié. »',en:'"The client charges at night, so it\'s free for us, right? Joking. Well, half joking."'},
+  why:{fr:'La recharge de nuit tombe sur des heures moins chères : profil favorable. Mais le volume peut exploser si le parc de VE grandit.',en:'Night charging lands on cheaper hours: a good profile. But volume can jump if the EV fleet grows.'},
+  g:[{fr:'Ici, le danger principal vient-il du prix ou du volume ? Regarde la roue Clients.',en:'Here, does the main danger come from price or volume? Look at the Clients wheel.'},
+   {fr:'Si le volume grandit, l\'énergie en plus est achetée à quel prix : celui que tu as couvert, ou celui du jour ?',en:'If volume grows, is the extra energy bought at your hedged price, or the day\'s price?'},
+   {fr:'Couvrir 100 % d\'un volume incertain : que se passe-t-il si finalement le client consomme moins ?',en:'Hedging 100% of an uncertain volume: what happens if the client ends up using less?'}],
+  en:'elec',vol:60,prof:.85,cap:2,go:0,wS:.2,cS:1,pS:1,ev:3,sol:.2,comp:4,sc:2.5},
+ {name:{fr:'Autoconsommation solaire + complément',en:'Solar self-consumption + top-up'},tags:[{fr:'Particuliers',en:'Households'},{fr:'Option verte',en:'Green option'},'25 GWh'],
+  who:{fr:'Clara, offres solaires',en:'Clara, solar offers'},col:'#ff8a1e',
+  q:{fr:'« Le client produit à midi et nous achète le reste le soir et l\'hiver. Donc on lui vend… les heures les plus chères ? »',en:'"The client produces at noon and buys the rest from us in the evening and in winter. So we sell him… the most expensive hours?"'},
+  why:{fr:'Le complément tombe le soir et l\'hiver : profil cher. Et chaque nouveau panneau fait baisser ton volume.',en:'The top-up lands in evenings and winter: an expensive profile. And every new panel lowers your volume.'},
+  g:[{fr:'Chaque panneau en plus fait baisser ton volume. L\'énergie couverte en trop, tu la revends à quel prix ?',en:'Every extra panel lowers your volume. Surplus hedged energy gets resold at what price?'},
+   {fr:'Ouvre la pile de coûts : que t\'apprend la taille de la brique Énergie sur ce profil ?',en:'Open the cost stack: what does the size of the Energy brick tell you about this profile?'},
+   {fr:'Petit volume : une erreur d\'un euro par MWh coûte combien de k€ ici ?',en:'Small volume: how many k€ does a one-euro-per-MWh mistake cost here?'}],
+  en:'elec',vol:25,prof:1.25,cap:5,go:1,wS:1,cS:1,pS:1,ev:.5,sol:3,comp:4.5,sc:2.5},
+ {name:{fr:'Grand industriel, contrat 5 ans',en:'Large industrial site, 5-year deal'},tags:[{fr:'Haut de portefeuille',en:'Key account'},{fr:'Électricité verte',en:'Green power'},'500 GWh'],
+  who:{fr:'Marc, montage d\'offres',en:'Marc, deal structuring'},col:'#7cff6b',
+  q:{fr:'« Gros client, très bon acheteur. Il a déjà trois offres concurrentes sur la table. Chaque dixième d\'euro compte. »',en:'"Big client, sharp buyer. He already has three competing offers. Every tenth of a euro counts."'},
+  why:{fr:'Consommation en ruban (plate, 24 h/24), peu sensible à la météo. Marges minces, volumes énormes : une petite erreur coûte cher.',en:'Baseload consumption (flat, 24/7), little weather impact. Thin margins, huge volume: a small mistake costs a lot.'},
+  g:[{fr:'Observe la courbe de signature : elle plonge très vite. Que vaut un demi-euro de mark-up en plus pour ce client ?',en:'Look at the signing curve: it dives fast. What is half a euro of extra mark-up worth to this client?'},
+   {fr:'500 GWh : un euro par MWh d\'écart, cela fait combien de k€ ? Et dans quel sens peut aller l\'erreur ?',en:'500 GWh: one euro per MWh of error is how many k€? And which way can the error go?'},
+   {fr:'Consommation plate et peu sensible à la météo : d\'où vient le risque qu\'il te reste vraiment ?',en:'Flat consumption, low weather sensitivity: where does your remaining risk really come from?'}],
+  en:'elec',vol:500,prof:1.0,cap:3,go:1,wS:.3,cS:.5,pS:1,ev:.2,sol:.2,comp:2,sc:1.2},
+ {name:{fr:'Offre dynamique indexée au spot',en:'Dynamic spot-indexed offer'},tags:[{fr:'Professionnels',en:'Small business'},{fr:'Prix variable',en:'Variable price'},'80 GWh'],
+  who:{fr:'Léa, innovation',en:'Léa, innovation'},col:'#c58bff',
+  q:{fr:'« Le prix suit le marché heure par heure. Le client prend le risque prix, on garde le reste. Facile ? »',en:'"The price follows the market hour by hour. The client takes the price risk, we keep the rest. Easy?"'},
+  why:{fr:'Le client porte presque tout le risque prix. Il te reste un risque résiduel. Un gros mark-up ici, c\'est un client perdu.',en:'The client carries almost all price risk. Some residual risk remains. A big mark-up here means a lost client.'},
+  g:[{fr:'Le prix suit le marché : quelle part du risque prix reste vraiment chez toi ? Regarde « si le spot monte de 10 % ».',en:'The price follows the market: how much price risk really stays with you? Look at "if spot rises 10%".'},
+   {fr:'Si ton risque résiduel est faible, à quoi sert un gros mark-up, à part donner le client au concurrent ?',en:'If your residual risk is small, what does a big mark-up achieve, apart from handing the client to a competitor?'},
+   {fr:'Quand le client paie le prix du jour, la couverture a-t-elle encore beaucoup d\'effet ? Teste avec le curseur.',en:'When the client pays the day\'s price, does hedging still matter much? Test it with the slider.'}],
+  en:'elec',vol:80,prof:1.0,cap:4,go:0,wS:.6,cS:1,pS:.15,ev:.5,sol:1,comp:1.5,sc:1},
+ {name:{fr:'Foyers chauffés au gaz',en:'Gas-heated homes'},tags:[{fr:'Particuliers',en:'Households'},{fr:'Gaz naturel',en:'Natural gas'},{fr:'Prix fixe 1 an',en:'1-year fixed'},'250 GWh'],
+  who:{fr:'Sofia, marketing gaz',en:'Sofia, gas marketing'},col:'#4dc3ff',
+  q:{fr:'« Prix fixe un an sur le gaz. Le client veut juste avoir chaud sans mauvaise surprise sur la facture. »',en:'"One-year fixed price on gas. The client just wants to stay warm with no nasty surprise on the bill."'},
+  why:{fr:'Le gaz de chauffage est très saisonnier : presque tout se consomme l\'hiver. Et le prix du gaz réagit fort aux tensions mondiales.',en:'Heating gas is very seasonal: almost all of it is used in winter. And gas prices react strongly to global tensions.'},
+  g:[{fr:'Si l\'hiver est froid, que se passe-t-il à la fois pour le volume et pour le prix du gaz ?',en:'If winter is cold, what happens to both volume and the gas price?'},
+   {fr:'Regarde la case GAZ de la roue Marché : quelle part de ton volume y reste exposée ?',en:'Look at the GAS slice on the Market wheel: how much of your volume stays exposed to it?'},
+   {fr:'Prix fixe sur un an seulement : est-ce que cela change la provision dont tu as besoin ?',en:'Fixed for only one year: does that change the provision you need?'}],
+  en:'gaz',vol:250,prof:1.15,cap:2,go:0,wS:1.8,cS:1,pS:1.1,ev:.1,sol:.1,comp:3,sc:2},
+ {name:{fr:'Brasserie artisanale au gaz vert',en:'Craft brewery on green gas'},tags:[{fr:'Professionnels',en:'Small business'},{fr:'Option biométhane',en:'Biomethane option'},{fr:'Prix fixe 2 ans',en:'2-year fixed'},'15 GWh'],
+  who:{fr:'Hugo, ventes entreprises',en:'Hugo, business sales'},col:'#a6ff4d',
+  q:{fr:'« Ils veulent du gaz vert pour l\'étiquette de leur bière. Le biométhane, ça coûte combien en plus ? »',en:'"They want green gas for their beer label. How much extra does biomethane cost?"'},
+  why:{fr:'L\'option verte ajoute un coût de certificats de production de biométhane. Profil plutôt plat : les cuves chauffent toute l\'année.',en:'The green option adds a biomethane production certificate cost. Fairly flat profile: the vats heat all year.'},
+  g:[{fr:'Les certificats biométhane s\'ajoutent au coût : sont-ils un risque, ou un coût connu d\'avance ?',en:'Biomethane certificates add to cost: are they a risk, or a cost known in advance?'},
+   {fr:'Petit volume, profil plat : où se cache le vrai risque de ce dossier ?',en:'Small volume, flat profile: where is the real risk in this deal?'},
+   {fr:'Un client qui veut du vert est-il forcément prêt à payer plus cher ? Observe la courbe de signature.',en:'Is a client who wants green necessarily willing to pay more? Watch the signing curve.'}],
+  en:'gaz',vol:15,prof:1.0,cap:1.5,go:4,wS:.4,cS:1,pS:1,ev:.1,sol:.1,comp:4,sc:2.5},
+ {name:{fr:'Data center en Île-de-France',en:'Data centre near Paris'},tags:[{fr:'Haut de portefeuille',en:'Key account'},{fr:'Ruban 24 h/24',en:'24/7 baseload'},'350 GWh'],
+  who:{fr:'Marc, montage d\'offres',en:'Marc, deal structuring'},col:'#39d0ff',
+  q:{fr:'« Leurs serveurs tournent jour et nuit. Ils comparent trois fournisseurs au centime près. »',en:'"Their servers run day and night. They compare three suppliers to the cent."'},
+  why:{fr:'Consommation plate et prévisible, presque pas de météo. Mais une concurrence féroce : chaque dixième d\'euro compte.',en:'Flat, predictable consumption, almost no weather effect. But fierce competition: every tenth of a euro counts.'},
+  g:[{fr:'Ruban 24 h/24 : le volume est très prévisible. Quelle part de ton risque disparaît avec une bonne couverture ?',en:'24/7 baseload: volume is very predictable. How much of your risk disappears with good hedging?'},
+   {fr:'La courbe de signature est très raide. Que coûte un demi-euro de trop face à trois concurrents ?',en:'The signing curve is very steep. What does half a euro too much cost against three competitors?'},
+   {fr:'350 GWh : un euro par MWh d\'erreur, cela fait combien de k€ ?',en:'350 GWh: one euro per MWh of error is how many k€?'}],
+  en:'elec',vol:350,prof:1.0,cap:3,go:1,wS:.2,cS:.3,pS:1,ev:.1,sol:.1,comp:1.8,sc:1.1},
+ {name:{fr:'Station de ski des Alpes',en:'Alpine ski resort'},tags:[{fr:'Collectivité',en:'Local authority'},{fr:'Canons à neige',en:'Snow cannons'},{fr:'Prix fixe 3 ans',en:'3-year fixed'},'30 GWh'],
+  who:{fr:'Julie, ventes collectivités',en:'Julie, public-sector sales'},col:'#e8f4ff',
+  q:{fr:'« Leurs canons à neige tournent quand il fait froid. Et quand il fait doux… ils tournent encore plus, pour sauver la saison. »',en:'"Their snow cannons run when it is cold. And when it is mild… they run even more, to save the season."'},
+  why:{fr:'Profil d\'hiver très marqué et volume imprévisible selon l\'enneigement : un dossier très sensible à la météo.',en:'Very strong winter profile and volume that swings with snowfall: a highly weather-sensitive deal.'},
+  g:[{fr:'Ici, le volume dépend énormément de la météo. Couvrir 100 % d\'un volume aussi incertain, est-ce prudent ?',en:'Here volume depends hugely on weather. Is hedging 100% of such an uncertain volume wise?'},
+   {fr:'Profil d\'hiver très marqué : regarde la brique Énergie dans la pile de coûts. Pourquoi est-elle si grosse ?',en:'Very strong winter profile: look at the Energy brick in the cost stack. Why is it so big?'},
+   {fr:'Ouvre le test de résistance « hausse » : ton mark-up tient-il le choc d\'un hiver extrême ?',en:'Open the "up" stress test: does your mark-up survive an extreme winter?'}],
+  en:'elec',vol:30,prof:1.3,cap:7,go:0,wS:2.0,cS:.6,pS:1,ev:.1,sol:.1,comp:4.5,sc:2.5},
+ {name:{fr:'Chaîne de 60 supermarchés',en:'Chain of 60 supermarkets'},tags:[{fr:'Professionnels',en:'Business'},{fr:'Froid alimentaire',en:'Refrigeration'},{fr:'Électricité verte',en:'Green power'},'90 GWh'],
+  who:{fr:'Inès, ventes entreprises',en:'Inès, business sales'},col:'#ff5ec8',
+  q:{fr:'« Leurs frigos tournent toute l\'année, et à fond pendant les canicules. Ils veulent un prix fixe et un engagement vert. »',en:'"Their fridges run all year, and flat out during heatwaves. They want a fixed price and a green commitment."'},
+  why:{fr:'Profil assez plat avec des pointes l\'été. La chaleur pèse sur leur volume, et l\'option verte demande des garanties d\'origine.',en:'Fairly flat profile with summer peaks. Heat weighs on their volume, and the green option needs guarantees of origin.'},
+  g:[{fr:'Les frigos tournent plus fort pendant les canicules. Quelle roue menace le plus ce dossier ?',en:'Fridges work harder in heatwaves. Which wheel threatens this deal most?'},
+   {fr:'Profil assez plat : ce client a-t-il besoin de la même provision qu\'un foyer chauffé à l\'électricité ?',en:'Fairly flat profile: does this client need the same provision as an electrically heated home?'},
+   {fr:'La brique garanties d\'origine est petite. Pourquoi est-elle quand même indispensable ici ?',en:'The guarantees-of-origin brick is small. Why is it still essential here?'}],
+  en:'elec',vol:90,prof:1.05,cap:4,go:1,wS:.9,cS:.8,pS:1,ev:.3,sol:.6,comp:3.5,sc:2.2},
+ {name:{fr:'Éclairage public d\'une agglomération',en:'Street lighting for a city area'},tags:[{fr:'Collectivité',en:'Local authority'},{fr:'Appel d\'offres',en:'Public tender'},{fr:'4 ans',en:'4 years'},'20 GWh'],
+  who:{fr:'Paul, marchés publics',en:'Paul, public tenders'},col:'#ffe14d',
+  q:{fr:'« Appel d\'offres public : prix le plus bas, pondéré par la note technique. Et ils éteignent déjà les lampadaires à 1 h du matin. »',en:'"Public tender: lowest price, weighted by the technical score. And they already switch the lights off at 1 a.m."'},
+  why:{fr:'Les lampadaires s\'allument le soir : profil de soirée, plutôt cher en début de nuit. La sobriété fait baisser le volume.',en:'Street lights come on in the evening: an evening profile, rather costly early in the night. Energy saving lowers volume.'},
+  g:[{fr:'Appel d\'offres public : le prix compte beaucoup. Où se situe ton offre par rapport à la concurrence ?',en:'Public tender: price matters a lot. Where does your offer sit versus competitors?'},
+   {fr:'La collectivité éteint déjà plus tôt. Que fait la sobriété à l\'énergie que tu as couverte ?',en:'The city already switches off earlier. What does energy saving do to the energy you hedged?'},
+   {fr:'Pourquoi l\'énergie livrée à 19 h coûte-t-elle plus cher que celle de 3 h du matin ?',en:'Why does energy delivered at 7 p.m. cost more than at 3 a.m.?'}],
+  en:'elec',vol:20,prof:1.1,cap:5,go:0,wS:.3,cS:1.4,pS:1,ev:.1,sol:.3,comp:3,sc:1.8}];
+
+/* ---------- FACTS & QUIZ (public data) ---------- */
+const FACT=[
+ {fr:'Chaque degré en moins en hiver ajoute environ 2 400 MW de demande en France. Le record historique de consommation : 102 098 MW le 8 février 2012 à 19 h, en pleine vague de froid. (Sources : RTE, presse)',en:'Each degree lost in winter adds roughly 2,400 MW of demand in France. The all-time consumption record: 102,098 MW on 8 February 2012 at 7 p.m., during a cold snap. (Sources: RTE, press)'},
+ {fr:'Le prix spot moyen de l\'électricité en France a été d\'environ 61 €/MWh en 2025, contre 58 €/MWh en 2024. C\'est le forward d\'une année « marché normal » dans le jeu. (Source : RTE, Bilan électrique 2025)',en:'The average French spot power price was about 61 €/MWh in 2025, versus 58 €/MWh in 2024. It is the forward of a "normal market" year in the game. (Source: RTE, 2025 annual review)'},
+ {fr:'En 2025, 1 807 heures ont dépassé 100 €/MWh, et 513 heures ont été à prix négatif. Le même mégawattheure peut valoir très cher le soir et moins que rien à midi : c\'est tout l\'enjeu du profil. (Source : RTE)',en:'In 2025, 1,807 hours exceeded 100 €/MWh and 513 hours had negative prices. The same megawatt-hour can be very expensive in the evening and worth less than nothing at noon: that is why the profile matters. (Source: RTE)'},
+ {fr:'Les prix négatifs progressent vite : 359 heures en 2024, 513 en 2025, déjà 407 heures au seul premier semestre 2026, surtout aux heures de forte production solaire. (Source : RTE)',en:'Negative prices are rising fast: 359 hours in 2024, 513 in 2025, and already 407 hours in the first half of 2026 alone, mostly at peak solar hours. (Source: RTE)'},
+ {fr:'Depuis le 1er janvier 2026, l\'ARENH a pris fin. Il est remplacé par le Versement Nucléaire Universel (VNU), qui redistribue aux consommateurs une partie des revenus nucléaires au-delà de certains seuils. Les fournisseurs s\'approvisionnent désormais entièrement sur le marché. (Sources : EDF, CRE)',en:'Since 1 January 2026, ARENH has ended. It was replaced by the Universal Nuclear Payment (VNU), which returns part of nuclear revenues above set thresholds to consumers. Suppliers now source fully on the market. (Sources: EDF, CRE)'},
+ {fr:'Le 6 janvier 2026, en pleine vague de froid, la consommation française a dépassé 90 000 MW (90 291 MW à 10 h 15). C\'est ce genre de journée que le backtesting doit expliquer après coup. (Source : RTE)',en:'On 6 January 2026, during a cold snap, French consumption exceeded 90,000 MW (90,291 MW at 10:15 a.m.). This is the kind of day backtesting has to explain afterwards. (Source: RTE)'}];
+const QZ=[
+ {q:{fr:'Pourquoi un foyer chauffé à l\'électricité coûte-t-il plus cher à approvisionner qu\'un profil plat ?',en:'Why does an electrically heated home cost more to supply than a flat profile?'},
+  o:[{fr:'Parce que son compteur est plus vieux',en:'Because its meter is older'},{fr:'Parce qu\'il consomme surtout l\'hiver, quand les prix sont hauts',en:'Because it consumes mostly in winter, when prices are high'},{fr:'Parce qu\'il paie la TVA deux fois',en:'Because it pays VAT twice'}],a:1,
+  x:{fr:'C\'est le coût de profil : on paie l\'énergie au moment où on la consomme.',en:'That is the profile cost: energy is paid for when it is consumed.'}},
+ {q:{fr:'Qu\'est-ce que le backtesting d\'un mark-up ?',en:'What is backtesting a mark-up?'},
+  o:[{fr:'Comparer après coup le risque provisionné au risque réellement subi',en:'Comparing, afterwards, the risk provisioned with the risk actually incurred'},{fr:'Tester l\'offre auprès de clients mystères',en:'Testing the offer with mystery shoppers'},{fr:'Recalculer la TVA de l\'an dernier',en:'Recomputing last year\'s VAT'}],a:0,
+  x:{fr:'C\'est ce qui dit si les provisions étaient bien calibrées, et comment ajuster les prochaines.',en:'It tells whether provisions were well calibrated, and how to adjust the next ones.'}},
+ {q:{fr:'Une offre de recharge de nuit a un profil favorable. Quel risque reste le plus important ?',en:'Night charging has a favourable profile. Which risk remains the biggest?'},
+  o:[{fr:'Le risque de change',en:'Currency risk'},{fr:'Le risque volume, si le parc de véhicules grandit plus vite que prévu',en:'Volume risk, if the vehicle fleet grows faster than expected'},{fr:'Aucun risque, c\'est la nuit',en:'No risk, it is night time'}],a:1,
+  x:{fr:'Un volume plus fort que prévu s\'achète au spot, au prix du jour, et pas au prix couvert.',en:'Extra volume is bought on the spot market at the day\'s price, not at the hedged price.'}},
+ {q:{fr:'Combien d\'heures à prix spot négatif la France a-t-elle connues en 2025 ?',en:'How many hours of negative spot prices did France see in 2025?'},
+  o:[{fr:'Environ 50',en:'About 50'},{fr:'Environ 513',en:'About 513'},{fr:'Environ 5 000',en:'About 5,000'}],a:1,
+  x:{fr:'513 heures selon RTE, contre 359 en 2024 : la croissance du solaire déforme les prix de midi.',en:'513 hours according to RTE, versus 359 in 2024: solar growth reshapes noon prices.'}},
+ {q:{fr:'Qu\'est-ce qu\'un PPA ?',en:'What is a PPA?'},
+  o:[{fr:'Un contrat long terme d\'achat d\'électricité, souvent renouvelable, entre un producteur et un acheteur',en:'A long-term power purchase contract, often renewable, between a producer and a buyer'},{fr:'Un indicateur de pollution',en:'A pollution index'},{fr:'Un tarif réglementé pour les PME',en:'A regulated tariff for SMEs'}],a:0,
+  x:{fr:'Les PPA demandent de chiffrer le profil de production, les garanties d\'origine et les clauses sur-mesure.',en:'PPAs require pricing the production profile, guarantees of origin and bespoke clauses.'}},
+ {q:{fr:'Quel mécanisme remplace l\'ARENH depuis le 1er janvier 2026 ?',en:'Which mechanism replaced ARENH on 1 January 2026?'},
+  o:[{fr:'Le chèque énergie',en:'The energy voucher'},{fr:'Le Versement Nucléaire Universel (VNU)',en:'The Universal Nuclear Payment (VNU)'},{fr:'Le bouclier tarifaire',en:'The tariff shield'}],a:1,
+  x:{fr:'Le VNU, accompagné des contrats d\'allocation de production nucléaire (CAPN).',en:'The VNU, alongside nuclear production allocation contracts (CAPN).'}},
+ {q:{fr:'À quoi sert le certificat de production de biométhane dans une offre gaz ?',en:'What is the biomethane production certificate for in a gas offer?'},
+  o:[{fr:'À payer le transport du gaz',en:'To pay for gas transport'},{fr:'À soutenir la production de biométhane, un coût que le fournisseur intègre à ses offres',en:'To support biomethane production, a cost the supplier builds into its offers'},{fr:'À mesurer la qualité du gaz',en:'To measure gas quality'}],a:1,
+  x:{fr:'C\'est un coût réglementaire à chiffrer, comme les garanties d\'origine en électricité.',en:'It is a regulatory cost to price in, like guarantees of origin for power.'}},
+ {q:{fr:'Pourquoi un mark-up trop élevé est-il aussi un problème ?',en:'Why is too high a mark-up also a problem?'},
+  o:[{fr:'Il est interdit par la loi',en:'It is illegal'},{fr:'Le client signe chez un concurrent : pas de risque, mais pas de marge non plus',en:'The client signs elsewhere: no risk, but no margin either'},{fr:'Il fait monter le prix spot',en:'It pushes up the spot price'}],a:1,
+  x:{fr:'Le bon mark-up couvre le risque raisonnable sans faire fuir le client. Le backtesting sert à trouver cet équilibre.',en:'The right mark-up covers reasonable risk without scaring the client away. Backtesting helps find that balance.'}}];
+
+const STEPS={fr:[
+ ['Le coût de base','On part du prix forward (54, 62 ou 74 €/MWh pour l\'électricité selon la conjoncture tirée en début de partie), multiplié par un facteur de profil : un client qui consomme l\'hiver ou le soir coûte plus cher qu\'un profil plat. On ajoute capacité, garanties d\'origine et coûts commerciaux.','Coût = forward × profil + capacité + GO + coûts commerciaux'],
+ ['La couverture','La part couverte est achetée à l\'avance, à prix figé. Le reste, et tout écart de volume, s\'achète ou se revend au prix spot de l\'année. Plus tu couvres, moins le prix spot te touche, mais tu paies une petite prime et tu restes exposé si le volume change.','Risque réalisé = part non couverte réelle × (spot réel − forward)'],
+ ['Le mark-up','C\'est ta provision pour risques, en €/MWh. Il doit couvrir ce que le risque réalisé peut raisonnablement coûter. Pas le pire cas absolu (le client partirait), pas zéro (tu perdrais de l\'argent au premier hiver froid).','Prix proposé = coût de base + mark-up'],
+ ['La signature','Le client compare ton prix à celui de la concurrence. À prix égal, il hésite. Chaque euro au-dessus fait chuter la probabilité, plus ou moins vite selon le client : un grand industriel négocie au dixième d\'euro.','Marge = (prix − coût réel) × volume réel']],
+ en:[
+ ['Base cost','Start from the forward price (54, 62 or 74 €/MWh for power, depending on the market drawn at the start), times a profile factor: a client using power in winter or evenings costs more than a flat profile. Add capacity, guarantees of origin and commercial costs.','Cost = forward × profile + capacity + GO + commercial costs'],
+ ['Hedging','The hedged share is bought in advance at a fixed price. The rest, and any volume gap, is bought or resold at the year\'s spot price. More hedging means less spot exposure, but a small premium and still some exposure if volume changes.','Realised risk = actual unhedged share × (actual spot − forward)'],
+ ['Mark-up','Your risk provision, in €/MWh. It should cover what realised risk can reasonably cost. Not the absolute worst case (the client would leave), not zero (you would lose money at the first cold winter).','Offer price = base cost + mark-up'],
+ ['Signing','The client compares your price with competitors. At equal price they hesitate. Every euro above makes the odds drop, more or less fast depending on the client: a big industrial buyer negotiates to the tenth of a euro.','Margin = (price − actual cost) × actual volume']]};
+
+/* ---------- TOOLS ---------- */
+const TOOLS=[
+ {id:'py',n:{fr:'Script Python météo',en:'Python weather script'},d:{fr:'Remplace le fichier Excel maudit. Révèle les vraies probabilités de la roue Météo.',en:'Replaces the cursed Excel file. Reveals the true odds of the Weather wheel.'},w:0},
+ {id:'lake',n:{fr:'Datalake marché',en:'Market datalake'},d:{fr:'Dix ans de prix historisés. Révèle les vraies probabilités de la roue Marché.',en:'Ten years of stored prices. Reveals the true odds of the Market wheel.'},w:1},
+ {id:'fc',n:{fr:'Prévision de consommation',en:'Consumption forecast'},d:{fr:'Un modèle de prévision du portefeuille. Révèle les vraies probabilités de la roue Clients.',en:'A portfolio forecasting model. Reveals the true odds of the Clients wheel.'},w:2},
+ {id:'mc',n:{fr:'Moteur de risque',en:'Risk engine'},d:{fr:'Calcule la distribution complète de ta marge : pire cas à 5 %, médiane, meilleur cas, probabilité de perte.',en:'Computes your full margin distribution: 5% worst case, median, best case, probability of loss.'}}];
+
+/* ---------- GLOSSARY ---------- */
+const GL=[
+ ['Mark-up','Provision pour risques ajoutée au coût d\'une offre. Elle doit couvrir les écarts entre prévu et réalisé, sans rendre l\'offre trop chère.','Risk provision added to an offer\'s cost. It must cover gaps between expected and realised, without pricing the offer out.'],
+ ['Sourcing','Stratégie d\'approvisionnement en énergie du portefeuille clients : quand et comment acheter.','Energy procurement strategy for the client portfolio: when and how to buy.'],
+ ['Couverture (hedge)','Acheter à l\'avance, à prix fixé, l\'énergie qu\'on a vendue à prix fixe. Elle réduit le risque prix.','Buying in advance, at a fixed price, the energy sold at a fixed price. It reduces price risk.'],
+ ['Forward / à terme','Contrat d\'achat d\'énergie pour une livraison future (mois, trimestre, année) à un prix fixé aujourd\'hui.','Contract to buy energy for future delivery (month, quarter, year) at a price set today.'],
+ ['Spot','Marché de l\'énergie livrée le lendemain, prix fixé heure par heure (ou quart d\'heure).','Market for next-day delivery, priced hour by hour (or by quarter hour).'],
+ ['Backtesting','Comparer après coup le risque provisionné au risque réalisé pour recalibrer les modèles.','Comparing provisioned risk with realised risk afterwards, to recalibrate models.'],
+ ['Profil / courbe de charge','La forme de la consommation dans le temps (heures, saisons). Un profil d\'hiver ou du soir coûte plus cher.','The shape of consumption over time (hours, seasons). A winter or evening profile costs more.'],
+ ['Risque prix','Perte si le prix de marché bouge alors que le prix client est figé.','Loss if market prices move while the client price is fixed.'],
+ ['Risque volume','Perte si le client consomme plus ou moins que prévu : on achète ou revend l\'écart au prix du jour.','Loss if the client uses more or less than expected: the gap is bought or sold at the day\'s price.'],
+ ['Risque de profil','Perte liée à la forme réelle de la consommation, différente de celle prévue.','Loss from the actual consumption shape differing from the forecast.'],
+ ['Thermosensibilité','Sensibilité de la consommation à la température. En France, environ 2 400 MW par degré en hiver.','How consumption reacts to temperature. In France, about 2,400 MW per degree in winter.'],
+ ['Capacité','Mécanisme qui rémunère la disponibilité de moyens de production ou d\'effacement aux pointes. Le fournisseur en supporte le coût.','Mechanism paying for generation or demand response available at peaks. Suppliers bear its cost.'],
+ ['Garantie d\'origine','Certificat qui prouve qu\'un MWh vient d\'une source renouvelable. Nécessaire pour vendre une offre verte.','Certificate proving a MWh comes from a renewable source. Needed to sell a green offer.'],
+ ['Certificat de production de biométhane','Dispositif qui oblige les fournisseurs de gaz à soutenir la production de biométhane, un coût à intégrer dans les offres gaz.','Scheme requiring gas suppliers to support biomethane production, a cost to include in gas offers.'],
+ ['PPA','Power Purchase Agreement : contrat long terme d\'achat d\'électricité, souvent renouvelable, entre producteur et acheteur.','Power Purchase Agreement: long-term power contract, often renewable, between producer and buyer.'],
+ ['Offre dynamique','Offre dont le prix suit le marché spot. Le client porte l\'essentiel du risque prix.','Offer whose price follows the spot market. The client bears most of the price risk.'],
+ ['Prix négatifs','Heures où l\'offre dépasse tellement la demande que le prix spot passe sous zéro. 513 heures en France en 2025.','Hours when supply so exceeds demand that the spot price drops below zero. 513 hours in France in 2025.'],
+ ['ARENH','Accès régulé à l\'électricité nucléaire historique, à 42 €/MWh. Fin le 31 décembre 2025.','Regulated access to historical nuclear power at 42 €/MWh. Ended 31 December 2025.'],
+ ['VNU','Versement Nucléaire Universel, en vigueur depuis le 1er janvier 2026 : redistribution aux consommateurs d\'une partie des revenus nucléaires au-delà de seuils.','Universal Nuclear Payment, in force since 1 January 2026: part of nuclear revenues above thresholds returned to consumers.'],
+ ['Churn','Départ de clients vers un concurrent. Il crée un surplus d\'énergie couverte à revendre.','Clients leaving for a competitor. It leaves surplus hedged energy to resell.'],
+ ['TTF','Principale place de marché du gaz en Europe. Ses prix influencent fortement l\'électricité.','Europe\'s main gas trading hub. Its prices strongly drive power prices.'],
+ ['Datalake','Entrepôt de données brutes et historisées (prix, consommations, contrats) qui alimente modèles et backtests.','Store of raw, historical data (prices, consumption, contracts) feeding models and backtests.'],
+ ['Quantile / VaR','Valeur sous laquelle on tombe avec une probabilité donnée, par exemple le pire cas à 5 %. Sert à dimensionner les provisions.','Value you fall below with a given probability, such as the 5% worst case. Used to size provisions.'],
+ ['TURPE','Tarif d\'utilisation des réseaux publics d\'électricité, payé par tous les clients, hors du périmètre du jeu.','Grid usage tariff paid by all clients, outside the game\'s scope.']];
+
+/* ---------- AUDIO ---------- */
+let AC=null,SND=true;
+const beep=(f,d=.07,ty='square',v=.05)=>{if(!SND)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.value=f;g.gain.setValueAtTime(v,AC.currentTime);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+d)}catch(e){}};
+const jingle=a=>a.forEach((f,i)=>setTimeout(()=>beep(f,.12,'square',.06),i*110));
+
+/* ---------- STATE & MODEL ---------- */
+let S;
+const reset=()=>{S={r:0,tools:new Set(),hist:[],quiz:0,pl:0,cur:null,deck:[],h:.6,mk:4}};
+const sig=(r,price,base)=>{const C=base+r.comp;return .92/(1+Math.exp((price-C)/r.sc))};
+const costs=(r,h,mk)=>{const Fp=(r.en==='gaz'?S.yr.Fg:S.yr.F)*r.fwd*r.prof,pr=PRIME*h;const base=Fp+pr+r.cap+r.go+COMM+(r.extra||0);const comp=Fp+PRIME*.6+r.cap+r.go+COMM;return{Fp,pr,base,price:base+mk,p:sig(r,base+mk,comp),C:comp+r.comp}};
+const wxOf=r=>WX[r.wx];
+const outcome=(r,h,mk,ws,ms,cs)=>{const c=costs(r,h,mk);const ce=cs.v*r.cS*(cs.k==='ev'?r.ev:cs.k==='sol'?r.sol:1);
+ const V=r.vol*Math.max(.5,1+ws.v*r.wS+ce);const Sp=Math.max(-5,c.Fp*(1+(ws.p+ms.p)*r.pS));const H=h*r.vol;
+ const E=H*c.Fp+(V-H)*Sp;const bb=(ws.b||0)+(ms.b||0)+(cs.b||0);const uE=E/V+bb;const risk=uE-c.Fp;const unit=uE+c.pr+r.cap+r.go+COMM+(r.extra||0);return{V,Sp,risk,bb,unit,margin:(c.price-unit)*V}};
+const dist=(r,h,mk)=>{const a=[];for(const w of WX[r.wx])for(const m of MK)for(const c of CL)a.push({m:outcome(r,h,mk,w,m,c).margin,p:w.w*m.w*c.w});
+ a.sort((x,y)=>x.m-y.m);const q=z=>{let s=0;for(const e of a){s+=e.p;if(s>=z)return e.m}return a[a.length-1].m};
+ return{p5:q(.05),p50:q(.5),p95:q(.95),loss:a.filter(e=>e.m<0).reduce((s,e)=>s+e.p,0)}};
+const pick=segs=>{let x=Math.random(),s=0;for(let i=0;i<segs.length;i++){s+=segs[i].w;if(x<s)return i}return segs.length-1};
+
+/* ---------- WHEEL ---------- */
+const WCOL=['#e8173c','#1e9bff','#17c37b','#9b30ff','#ff8c00','#00b8c4','#ff4fa3','#3b3fd8'];
+const colOf=(sg,i,off)=>sg.t==='bonus'?'#ffd700':sg.t==='malus'?'#111018':(sg.c||WCOL[(i+off)%WCOL.length]);
+const gold=(c,x0,y0,x1,y1)=>{const g=c.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,'#6b4a0c');g.addColorStop(.25,'#ffe58a');g.addColorStop(.5,'#b8860b');g.addColorStop(.75,'#fff4c2');g.addColorStop(1,'#7a5512');return g};
+const star=(c,x,y,r1,r2,n)=>{c.beginPath();for(let k=0;k<n*2;k++){const r=k%2?r2:r1,a=-Math.PI/2+k*Math.PI/n;k?c.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r):c.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r)}c.closePath()};
+class Wheel{
+ constructor(cv,segs,off,reveal){this.cv=cv;this.segs=segs;this.off=off;this.rev=reveal;this.rot=-Math.PI/2-this.arcs()[0].m;this.spin=false;this.hit=-1;this.flap=0;this.size()}
+ size(){const d=Math.min(2,window.devicePixelRatio||1),w=this.cv.clientWidth||300;this.W=w;this.cv.width=w*d;this.cv.height=w*d;this.cv.getContext('2d').setTransform(d,0,0,d,0,0)}
+ arcs(){const n=this.segs.length;let a=0;return this.segs.map(s=>{const sp=this.rev?s.w*Math.PI*2:Math.PI*2/n;const o={a0:a,a1:a+sp,m:a+sp/2};a+=sp;return o})}
+ draw(tm){const c=this.cv.getContext('2d'),W=this.W,cx=W/2,cy=W/2+4,R=W/2-24;c.clearRect(0,0,W,W);
+  c.save();c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=18;c.shadowOffsetY=6;c.beginPath();c.arc(cx,cy,R+18,0,7);c.fillStyle=gold(c,cx-R,cy-R,cx+R,cy+R);c.fill();c.restore();
+  c.beginPath();c.arc(cx,cy,R+7,0,7);c.fillStyle='#1a0f05';c.fill();
+  const ar=this.arcs();
+  ar.forEach((a,i)=>{const sg=this.segs[i],a0=a.a0+this.rot,a1=a.a1+this.rot;c.beginPath();c.moveTo(cx,cy);c.arc(cx,cy,R,a0,a1);c.closePath();
+   if(sg.t==='bonus'){const g=c.createRadialGradient(cx,cy,R*.2,cx,cy,R);g.addColorStop(0,'#fffbe0');g.addColorStop(.6,'#ffd700');g.addColorStop(1,'#c99400');c.fillStyle=g}
+   else c.fillStyle=colOf(sg,i,this.off);
+   c.fill();
+   const sh=c.createRadialGradient(cx,cy,R*.15,cx,cy,R);sh.addColorStop(0,'rgba(255,255,255,.35)');sh.addColorStop(.55,'rgba(255,255,255,0)');sh.addColorStop(1,'rgba(0,0,0,.4)');c.fillStyle=sh;c.fill();
+   if(sg.t==='malus'){c.save();c.clip();c.strokeStyle='rgba(255,40,70,.35)';c.lineWidth=3;for(let k=-W;k<W;k+=10){c.beginPath();c.moveTo(cx+k,cy-W);c.lineTo(cx+k+W,cy+W);c.stroke()}c.restore()}
+   if(i===this.hit&&!this.spin&&Math.floor(tm/220)%2){c.fillStyle='rgba(255,255,255,.5)';c.fill()}
+   c.save();c.translate(cx,cy);c.rotate(a.m+this.rot);c.textAlign='right';c.textBaseline='middle';
+   const fs=W<300?7:W<380?8:10;c.font=fs+'px "Press Start 2P"';
+   const txt=t(sg.s);c.fillStyle='rgba(0,0,0,.6)';c.fillText(txt,R-13,1.5);
+   c.fillStyle=sg.t==='bonus'?'#3a2600':sg.t==='malus'?'#ff3355':'#fff';c.fillText(txt,R-14,0);
+   c.font=(fs-1)+'px "Press Start 2P"';c.fillStyle=sg.t==='bonus'?'#3a2600':'rgba(255,255,255,.75)';c.fillText(this.rev?Math.round(sg.w*100)+'%':'??%',R-16,fs+6);c.restore()});
+  ar.forEach(a=>{const an=a.a0+this.rot;c.strokeStyle=gold(c,cx,cy,cx+Math.cos(an)*R,cy+Math.sin(an)*R);c.lineWidth=2.5;c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(an)*R,cy+Math.sin(an)*R);c.stroke();
+   c.beginPath();c.arc(cx+Math.cos(an)*(R-4),cy+Math.sin(an)*(R-4),3.2,0,7);c.fillStyle='#ffe58a';c.fill();c.strokeStyle='#5a3d08';c.lineWidth=1;c.stroke()});
+  c.beginPath();c.arc(cx,cy,R,0,7);c.strokeStyle='#ffe58a';c.lineWidth=2;c.stroke();
+  const nb=30;for(let k=0;k<nb;k++){const an=k/nb*Math.PI*2,on=this.spin?((k+Math.floor(tm/50))%3===0):((k+Math.floor(tm/380))%2===0),bx=cx+Math.cos(an)*(R+12.5),by=cy+Math.sin(an)*(R+12.5);
+   c.beginPath();c.arc(bx,by,3.4,0,7);c.fillStyle=on?'#fffbe0':'#6e5420';c.shadowColor='#fff2a0';c.shadowBlur=on?12:0;c.fill();c.shadowBlur=0}
+  c.beginPath();c.arc(cx,cy,R*.27,0,7);c.fillStyle=gold(c,cx-R*.27,cy-R*.27,cx+R*.27,cy+R*.27);c.fill();
+  c.beginPath();c.arc(cx,cy,R*.21,0,7);const hg=c.createRadialGradient(cx-4,cy-4,2,cx,cy,R*.21);hg.addColorStop(0,'#5a2bd6');hg.addColorStop(1,'#140a3a');c.fillStyle=hg;c.fill();
+  c.save();c.translate(cx,cy);c.rotate(this.rot*.0+tm/2000);star(c,0,0,R*.17,R*.07,8);c.fillStyle='rgba(255,215,0,.25)';c.fill();c.restore();
+  c.fillStyle='#ffe58a';c.font=(W<250?9:11)+'px "Press Start 2P"';c.textAlign='center';c.textBaseline='middle';c.fillText('?!',cx,cy+1);
+  c.save();c.beginPath();c.ellipse(cx-R*.25,cy-R*.45,R*.6,R*.28,-.5,0,7);c.fillStyle='rgba(255,255,255,.07)';c.fill();c.restore();
+  // flapper
+  let fl=0;if(this.spin){const P=Math.PI*2,pos=(((-Math.PI/2-this.rot)%P)+P)%P;let d=9;ar.forEach(a=>{d=Math.min(d,Math.abs(pos-a.a0),P-Math.abs(pos-a.a0))});fl=d<.09?(.09-d)/.09*.55:0}
+  this.flap+=(fl-this.flap)*.5;
+  c.save();c.translate(cx,10);c.rotate(this.flap);c.shadowColor='rgba(0,0,0,.6)';c.shadowBlur=6;c.beginPath();c.moveTo(-12,-4);c.lineTo(12,-4);c.lineTo(0,26);c.closePath();c.fillStyle=gold(c,-12,0,12,0);c.fill();c.shadowBlur=0;c.strokeStyle='#5a3d08';c.lineWidth=1.5;c.stroke();
+  c.beginPath();c.arc(0,3,4.5,0,7);c.fillStyle='#e8173c';c.fill();c.fillStyle='rgba(255,255,255,.7)';c.fillRect(-2,0,2,2);c.restore()}
+ go(idx,dur){return new Promise(res=>{const a=this.arcs()[idx];const jit=(Math.random()-.5)*(a.a1-a.a0)*.6;
+  let target=-Math.PI/2-a.m-jit;const start=this.rot;while(target<start+Math.PI*2*6)target+=Math.PI*2;
+  const t0=performance.now();this.spin=true;this.hit=-1;const ar=this.arcs();let lastSeg=-1;
+  const step=now=>{const k=Math.min(1,(now-t0)/dur),e=1-Math.pow(1-k,4);this.rot=start+(target-start)*e;
+   const P=Math.PI*2,pos=(((-Math.PI/2-this.rot)%P)+P)%P,sg=ar.findIndex(x=>pos>=x.a0&&pos<x.a1);if(sg!==lastSeg){lastSeg=sg;beep(600+Math.random()*250,.025,'square',.03)}
+   if(k<1)requestAnimationFrame(step);else{this.spin=false;this.hit=idx;const sgm=this.segs[idx];
+    if(sgm.t==='bonus'){jingle([784,988,1175,1568]);fx(this.cv,'bonus')}else if(sgm.t==='malus'){beep(110,.4,'sawtooth',.08);fx(this.cv,'malus')}else beep(880,.15,'triangle',.07);res()}};requestAnimationFrame(step)})}}
+/* ---------- FX (confetti / sparks / shake) ---------- */
+const fxc=document.createElement('canvas');fxc.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:48';document.body.appendChild(fxc);
+let PT=[];const fx=(el,kind)=>{const b=el.getBoundingClientRect(),x=b.left+b.width/2,y=b.top+b.height/2;
+ const cols=kind==='bonus'?['#ffd700','#fff4c2','#ff4fa3','#1e9bff','#17c37b','#ffffff']:['#ff2a4a','#ff8c00','#3a0010','#ffffff'];
+ for(let k=0;k<(kind==='bonus'?140:70);k++){const a=Math.random()*Math.PI*2,v=(kind==='bonus'?4:3)+Math.random()*7;PT.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-(kind==='bonus'?4:1),c:cols[k%cols.length],s:3+Math.random()*5,l:70+Math.random()*50,r:Math.random()*6})}
+ const box=el.closest('.wheel');if(box){box.classList.remove('shake','glow');void box.offsetWidth;box.classList.add(kind==='bonus'?'glow':'shake')}};
+const fxLoop=()=>{const d=Math.min(2,window.devicePixelRatio||1),w=innerWidth,h=innerHeight;if(fxc.width!==w*d||fxc.height!==h*d){fxc.width=w*d;fxc.height=h*d}
+ const c=fxc.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);
+ PT=PT.filter(p=>p.l-->0);PT.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.22;p.vx*=.985;p.r+=.2;c.save();c.translate(p.x,p.y);c.rotate(p.r);c.globalAlpha=Math.min(1,p.l/30);c.fillStyle=p.c;c.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);c.restore()});
+ requestAnimationFrame(fxLoop)};requestAnimationFrame(fxLoop);
+let WH=[];
+const loop=tm=>{WH.forEach(w=>w.draw(tm));requestAnimationFrame(loop)};requestAnimationFrame(loop);
+
+/* ---------- TITLE SCENE ---------- */
+const tc=$('tc'),tx=tc.getContext('2d');tx.imageSmoothingEnabled=false;
+const SKY=[['#0b0630','#3a1060','#ff3fa4'],['#04203a','#0f6b8c','#39d0ff'],['#1a0630','#7a1f4f','#ff8a1e'],['#03241a','#0e6b55','#7cff6b'],['#20072a','#5a2a8c','#ffd23f']];
+const mix=(a,b,k)=>{const p=s=>[1,3,5].map(i=>parseInt(s.slice(i,i+2),16));const x=p(a),y=p(b);return 'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*k)).join(',')+')'};
+const stars=Array.from({length:70},()=>[Math.random()*320,Math.random()*90,Math.random()*6]);
+const towers=[];{let x=0;while(x<320){const w=10+Math.floor(Math.random()*16),h=30+Math.floor(Math.random()*70);towers.push({x,w,h,win:Array.from({length:60},()=>Math.random()<.5)});x+=w+2+Math.floor(Math.random()*4)}}
+const turb=[[40,130,26],[90,138,20],[250,128,28],[290,140,18]];
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const scene=tm=>{if(!$('title').classList.contains('on')){requestAnimationFrame(scene);return}
+ const T=reduce?0:tm/1000,cyc=(T/5)%SKY.length,i0=Math.floor(cyc),i1=(i0+1)%SKY.length,k=cyc-i0;
+ const top=mix(SKY[i0][0],SKY[i1][0],k),bot=mix(SKY[i0][1],SKY[i1][1],k),acc=mix(SKY[i0][2],SKY[i1][2],k);
+ const g=tx.createLinearGradient(0,0,0,180);g.addColorStop(0,top);g.addColorStop(.75,bot);g.addColorStop(1,'#000');tx.fillStyle=g;tx.fillRect(0,0,320,180);
+ stars.forEach(s=>{tx.fillStyle=(Math.sin(T*2+s[2])>.3)?'#fff':'#8a86b0';tx.fillRect(s[0]|0,s[1]|0,1,1)});
+ tx.fillStyle='#fff6d8';tx.beginPath();tx.arc(302,16,7,0,7);tx.fill();tx.fillStyle=top;tx.beginPath();tx.arc(305,14,6,0,7);tx.fill();
+ tx.strokeStyle=acc;tx.lineWidth=2;tx.globalAlpha=.85;tx.beginPath();for(let x=0;x<=320;x+=4){const y=62+Math.sin((x+T*40)/23)*10+Math.sin((x+T*70)/9)*4+((Math.floor((x+T*40)/37)%5===0)?-8:0);x?tx.lineTo(x,y):tx.moveTo(x,y)}tx.stroke();
+ tx.globalAlpha=.25;tx.lineWidth=6;tx.stroke();tx.globalAlpha=1;
+ tx.fillStyle='#1a1240';tx.fillRect(0,150,320,30);
+ towers.forEach((b,bi)=>{const y=150-b.h;tx.fillStyle='#120c2a';tx.fillRect(b.x,y,b.w,b.h);tx.fillStyle=acc;tx.fillRect(b.x,y,b.w,1);
+  let n=0;for(let wy=y+4;wy<146;wy+=5)for(let wx=b.x+2;wx<b.x+b.w-2;wx+=4){const on=b.win[n%60]!==((Math.floor(T*.7+bi+n*.13)%9)===0);n++;if(on){tx.fillStyle=n%7===0?acc:'#ffe9a8';tx.fillRect(wx,wy,2,2)}}});
+ turb.forEach(([x,y,h],j)=>{tx.fillStyle='#e8e4ff';tx.fillRect(x,y-h,2,h);const cx=x+1,cy=y-h,a=T*(2+j*.3);tx.strokeStyle='#fff';tx.lineWidth=1.5;
+  for(let b=0;b<3;b++){const an=a+b*2.094;tx.beginPath();tx.moveTo(cx,cy);tx.lineTo(cx+Math.cos(an)*13,cy+Math.sin(an)*13);tx.stroke()}});
+ tx.strokeStyle='#8a86b0';tx.lineWidth=1;tx.beginPath();for(let x=0;x<=320;x+=2){const y=118+Math.cosh(((x%80)-40)/40)*6;x?tx.lineTo(x,y):tx.moveTo(x,y)}tx.stroke();
+ for(let e=0;e<6;e++){const x=((T*60+e*57)%320),y=118+Math.cosh(((x%80)-40)/40)*6;tx.fillStyle=acc;tx.fillRect(x-1,y-1,3,3)}
+ tx.fillStyle=acc;tx.globalAlpha=.35;for(let x=0;x<320;x+=16)tx.fillRect(x,152,1,28);for(let y=156;y<180;y+=6)tx.fillRect(0,y,320,1);tx.globalAlpha=1;
+ requestAnimationFrame(scene)};requestAnimationFrame(scene);
+
+/* ---------- NPC SPRITE ---------- */
+const npc=col=>{const c=$('npc').getContext('2d');c.clearRect(0,0,24,24);const P=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(x,y,w,h)};
+ P(6,3,12,3,'#2a1a0e');P(6,6,12,8,'#f2c89a');P(8,9,2,2,'#120c22');P(14,9,2,2,'#120c22');P(10,12,4,1,'#9a3b3b');P(5,6,1,4,'#2a1a0e');P(18,6,1,4,'#2a1a0e');
+ P(4,15,16,9,col);P(11,15,2,6,'#fff');P(11,16,2,4,'#120c22');P(2,17,3,5,col);P(19,17,3,5,col);P(19,14,4,3,'#fff');P(20,13,2,1,'#ccc')};
+
+/* ---------- RENDER ROUND ---------- */
+const applyLang=()=>{document.documentElement.lang=L;document.querySelectorAll('[data-fr]').forEach(e=>e.textContent=e.dataset[L]);$('langBtn').textContent=L==='fr'?'EN':'FR';
+ $('logo').innerHTML=[...'WATT THE RISK?!'].map((ch,i)=>ch===' '?'<span>&nbsp;</span>':'<span style="animation-delay:'+(i*.08)+'s,'+(-i*.3)+'s">'+ch+'</span>').join('');
+ $('tickTxt').textContent=(L==='fr'?'513 HEURES À PRIX NÉGATIF EN 2025 ★ PRIX SPOT MOYEN 2025 : 61 €/MWh ★ RECORD : 102 098 MW LE 8 FÉVRIER 2012 ★ +2 400 MW PAR DEGRÉ EN MOINS L\'HIVER ★ FIN DE L\'ARENH, PLACE AU VNU DEPUIS LE 1ER JANVIER 2026 ★ 407 HEURES NÉGATIVES AU 1ER SEMESTRE 2026 ★ SOURCES : RTE, CRE':'513 NEGATIVE-PRICE HOURS IN 2025 ★ AVERAGE 2025 SPOT PRICE: 61 €/MWh ★ RECORD: 102,098 MW ON 8 FEB 2012 ★ +2,400 MW PER DEGREE LOST IN WINTER ★ ARENH ENDED, VNU SINCE 1 JAN 2026 ★ 407 NEGATIVE HOURS IN H1 2026 ★ SOURCES: RTE, CRE');
+ $('gq').placeholder=L==='fr'?'Chercher un terme…':'Search a term…';$('snd').textContent=SND?'SON ON':'SON OFF';
+ howT();glT();if(S&&S.rd&&$('game').classList.contains('on'))S.rd()};
+const howT=()=>{const st=L==='fr'?[
+ ['Tu es analyste costing','Chaque partie tire au sort une conjoncture, une concurrence et 6 dossiers parmi 12 (électricité et gaz). Pour chacun, tu fixes le prix de l\'offre, étape par étape.'],
+ ['Règle 2 curseurs','La part couverte à terme fige ton prix d\'achat. Le mark-up est ta provision pour risques. Le prix final = coûts + mark-up.'],
+ ['Envoie l\'offre','Plus ton prix est haut face à la concurrence, moins le client signe. Pas signé : pas de marge, mais le dossier est quand même backtesté.'],
+ ['Lance les roues','Météo, marché, clients : trois roues de 10 cases, avec un bonus doré et un piège. L\'année se déroule.'],
+ ['Backtest','On compare ton mark-up (risque provisionné) au risque réalisé. Bien calibré = tu gagnes, sans faire fuir le client.'],
+ ['Outils','Après chaque dossier, automatise : chaque outil révèle les vraies probabilités d\'une roue ou la distribution de ta marge.']]:[
+ ['You are a costing analyst','Each game draws a market, a competition level and 6 deals out of 12 (power and gas). For each, you set the offer price, step by step.'],
+ ['Two sliders','The hedged share locks your purchase price. The mark-up is your risk provision. Final price = costs + mark-up.'],
+ ['Send the offer','The higher your price versus competitors, the less likely the client signs. Unsigned: no margin, but the deal is still backtested.'],
+ ['Spin the wheels','Weather, market, clients: three 10-slice wheels, with a golden bonus and a trap. The year plays out.'],
+ ['Backtest','Your mark-up (provisioned risk) is compared with realised risk. Well calibrated = you win without scaring the client away.'],
+ ['Tools','After each deal, automate: each tool reveals one wheel\'s true odds or your margin distribution.']];
+ $('howTxt').innerHTML=st.map((s,i)=>'<div class="fact" style="margin-top:10px"><span class="px">'+(i+1)+'. '+s[0]+'</span>'+s[1]+'</div>').join('')};
+const glT=()=>{const q=($('gq').value||'').toLowerCase();$('glList').innerHTML=GL.filter(g=>(g[0]+g[1]+g[2]).toLowerCase().includes(q)).map(g=>'<div><b>'+g[0]+'</b><br>'+(L==='fr'?g[1]:g[2])+'</div>').join('')||'<div>…</div>'};
+
+const dashT=(R0,h,mk,c)=>{const gap=c.price-c.C,exp=(1-h)*R0.vol;const s10=riskAt(R0,h,0,.10);
+ const up=riskAt(R0,h,.05*R0.wS,.30),dn=riskAt(R0,h,-.08*R0.cS,-.20);const fr=L==='fr';
+ const row=(a,b,n,cl)=>'<div><span>'+a+'</span><b class="'+(cl||'')+'">'+b+'</b>'+(n?'<small>'+n+'</small>':'')+'</div>';
+ return row(fr?'Écart avec la concurrence':'Gap to competitors',(gap>0?'+':'')+fmt(gap,2)+' €/MWh',fr?'Positif : tu es plus cher que le marché. Négatif : tu es moins cher, mais tu provisionnes moins.':'Positive: pricier than the market. Negative: cheaper, but you provision less.')+
+  row(fr?'Énergie laissée au prix du jour':'Energy left at the day\'s price',fmt(exp,0)+' GWh',fr?'Sur ce volume, chaque mouvement du spot passe directement dans ton coût.':'On this volume, every spot move goes straight into your cost.')+
+  row(fr?'Sensibilité : spot +10 %':'Sensitivity: spot +10%','+'+fmt(s10,2)+' €/MWh',fr?'Ce que te coûterait une hausse de 10 % du spot, sans changement de volume.':'What a 10% spot rise would cost you, with no volume change.')+
+  row(fr?'Test de résistance « hausse »':'Stress test "up"',fmt(up,2)+' €/MWh',fr?'Volume en hausse selon la sensibilité météo du client et spot +30 %. Compare ce chiffre à ton mark-up.':'Volume up by the client\'s weather sensitivity and spot +30%. Compare it with your mark-up.',up>mk?'ko':'ok')+
+  row(fr?'Test de résistance « baisse »':'Stress test "down"',fmt(dn,2)+' €/MWh',fr?'Clients qui partent et spot −20 % : l\'énergie couverte en trop se revend moins cher.':'Clients leaving and spot −20%: surplus hedged energy resells for less.',dn>mk?'ko':'ok')+
+  row(fr?'Provision totale du dossier':'Total deal provision',keur(mk*R0.vol),fr?'Ton mark-up multiplié par le volume prévu.':'Your mark-up times expected volume.')};
+const effB=s=>s.b!=null?(s.b<0?(L==='fr'?'bonus : ':'bonus: ')+fmt(s.b,1)+(L==='fr'?' €/MWh sur ton coût':' €/MWh on your cost'):(L==='fr'?'malus : +':'penalty: +')+fmt(s.b,1)+(L==='fr'?' €/MWh sur ton coût':' €/MWh on your cost')):'';
+const pct=x=>(x>0?'+':'')+Math.round(x*100)+' %';
+const effW=s=>s.b!=null?effB(s):(L==='fr'?'volume ':'volume ')+pct(s.v)+' · '+(L==='fr'?'prix ':'price ')+pct(s.p);
+const effM=s=>s.b!=null?effB(s):(L==='fr'?'prix spot ':'spot price ')+pct(s.p);
+const effC=s=>s.b!=null?effB(s):(L==='fr'?'volume ':'volume ')+pct(s.v)+(s.k?(L==='fr'?' (× sensibilité du client)':' (× client sensitivity)'):'');
+
+const whyT=(R0,o)=>{const fr=L==='fr',Fp=costs(R0,S.cur.h,0).Fp,H=S.cur.h*R0.vol,gapS=o.Sp-Fp,share=(o.V-H)/o.V;
+ const z=v=>Math.abs(v)<.005?0:v,pe=z((R0.vol-H)*gapS/o.V),ve=z((o.V-R0.vol)*gapS/o.V);
+ let tip;if(o.V<H)tip=fr?'Tu avais couvert plus que ce que le client a consommé : le surplus a été revendu au prix spot de l\'année.':'You hedged more than the client used: the surplus was resold at the year\'s spot price.';
+ else if(Math.abs(gapS)<1)tip=fr?'Le spot est resté proche du forward : la couverture n\'a presque rien changé cette année. C\'est sur plusieurs années que le backtesting juge un mark-up.':'Spot stayed close to the forward: hedging barely mattered this year. Backtesting judges a mark-up over several years.';
+ else if(gapS>0)tip=fr?'Le spot a fini au-dessus du forward : chaque MWh non couvert t\'a coûté plus cher que prévu.':'Spot ended above the forward: every unhedged MWh cost more than planned.';
+ else tip=fr?'Le spot a fini sous le forward : la part non couverte t\'a fait gagner, la part couverte t\'a fait payer plus que le marché.':'Spot ended below the forward: the unhedged share earned you money, the hedged share cost more than the market.';
+ return '<div class="why"><span class="px" style="font-size:10px;color:var(--a1)">'+(fr?'POURQUOI CE RÉSULTAT ?':'WHY THIS RESULT?')+'</span>'+
+  '<p><span class="fml">'+(fr?'Risque réalisé = part non couverte réelle × écart spot + bonus/malus':'Realised risk = actual unhedged share × spot gap + bonus/penalty')+'</span><br>'+
+  fmt(share*100,0)+' % × ('+fmt(o.Sp,1)+' − '+fmt(Fp,1)+')'+(o.bb?(o.bb>0?' + ':' − ')+fmt(Math.abs(o.bb),1):'')+' = '+fmt(o.risk,2)+' €/MWh</p>'+
+  '<p>'+(fr?'Dont effet prix sur la part non couverte prévue : ':'Of which price effect on the planned unhedged share: ')+'<b>'+fmt(pe,2)+'</b> €/MWh<br>'+
+  (fr?'Dont effet volume (écart acheté ou revendu au spot) : ':'Of which volume effect (gap bought or resold at spot): ')+'<b>'+fmt(ve,2)+'</b> €/MWh</p><p class="hint">'+tip+'</p></div>'};
+
+/* ---------- FLOW ---------- */
+const banner=(a,b,cb)=>{$('banA').textContent=a;$('banB').textContent=b;$('ban').classList.add('on');jingle([523,659,784,1047]);setTimeout(()=>{$('ban').classList.remove('on');cb&&cb()},1700)};
+const show=id=>{document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));window.scrollTo(0,0)};
+/* ---------- GAME FLOW: one step per screen ---------- */
+const tl=(a,b)=>L==='fr'?a:b;
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const SEAS=[{sea:{fr:'HIVER',en:'WINTER'},wx:'winter'},{sea:{fr:'PRINTEMPS',en:'SPRING'},wx:'mid'},{sea:{fr:'ÉTÉ',en:'SUMMER'},wx:'summer'},{sea:{fr:'AUTOMNE',en:'AUTUMN'},wx:'mid'},{sea:{fr:'HIVER',en:'WINTER'},wx:'winter'},{sea:{fr:'PRINTEMPS',en:'SPRING'},wx:'mid'}];
+const newGame=()=>{reset();S.yr=YR[Math.floor(Math.random()*YR.length)];S.cp=CP[Math.floor(Math.random()*CP.length)];
+ S.deck=shuf(D).slice(0,6).map((d,i)=>({...d,...SEAS[i],fwd:1,extra:0,comp:d.comp+S.cp.c,evt:null}));
+ S.fq=shuf(FACT.map((_,i)=>i));S.qq=shuf(QZ.map((_,i)=>i));S.evs=shuf(EVT.map((_,i)=>i));S.h=.6;S.mk=4};
+const r=()=>S.deck[S.r];
+const fwdOf=R0=>(R0.en==='gaz'?S.yr.Fg:S.yr.F)*R0.fwd;
+const STG=['brief','mentor','hedge','markup','sign','w0','w1','w2','result','quiz'];
+const hud=()=>{const R0=r();$('hR').textContent=(S.r+1)+'/6';$('hS').textContent=t(R0.sea);$('hP').textContent=keur(S.pl);
+ const k=STG.indexOf(S.stage==='why'?'result':S.stage);$('dots').innerHTML=STG.map((s,i)=>'<i class="'+(k<0?'':i<k?'done':i===k?'on':'')+'"></i>').join('');
+ $('hT').innerHTML=S.tools.size?TOOLS.map(x=>'<span class="tool '+(S.tools.has(x.id)?'on':'')+'" title="'+t(x.n)+'">'+x.id.toUpperCase()+'</span>').join(''):'<span class="tool">chiffrage_V12_FINAL_vraiment_final.xlsx</span>'};
+const put=(name,html)=>{S.stage=name;const st=$('stage');st.innerHTML='<div class="card panel">'+html+'</div>';st.classList.remove('anim');void st.offsetWidth;st.classList.add('anim');window.scrollTo(0,0);WH=WH.filter(w=>document.body.contains(w.cv));if(S.deck.length)hud()};
+const nav=(back,next,bcls)=>'<div class="nav">'+(back?'<button class="'+(bcls||'ghost')+'" id="bk">'+back+'</button>':'<span></span>')+'<button id="nx">'+next+'</button></div>';
+const tile=(a,b)=>'<div class="tile"><span>'+a+'</span><b>'+b+'</b></div>';
+const info=(title,html)=>{$('iT').textContent=title;$('iB').innerHTML=html;open('mInfo')};
+const riskAt=(R0,h,dv,dp)=>{const Fp=costs(R0,h,0).Fp,V=1+dv,Sp=Fp*(1+dp*R0.pS);return (V-h)/V*(Sp-Fp)};
+
+const stackHTML=()=>{const R0=r(),c=costs(R0,S.h,S.mk),gaz=R0.en==='gaz';
+ const parts=[[tl('Énergie (forward × profil)','Energy (forward × profile)'),c.Fp,'#39d0ff'],[tl('Prime de couverture','Hedging premium'),c.pr,'#b07cff'],[gaz?tl('Stockage et flexibilité gaz','Gas storage & flexibility'):tl('Capacité','Capacity'),R0.cap,'#ff7a1e'],[gaz?tl('Certificats biométhane','Biomethane certificates'):tl('Garanties d\'origine','Guarantees of origin'),R0.go,'#7cff6b'],[tl('Coûts commerciaux et gestion','Commercial & operating costs'),COMM,'#9a93c8'],[tl('Geste commercial promis','Promised discount'),R0.extra,'#ffd23f'],['Mark-up',S.mk,'#ff3fa4']].filter(p=>p[1]>0);
+ return '<p>'+tl('Forward de la conjoncture : ','Market forward: ')+'<b>'+fmt(fwdOf(R0),1)+' €/MWh</b> ('+(gaz?tl('gaz','gas'):tl('électricité','power'))+') · '+tl('facteur de profil','profile factor')+' <b>× '+fmt(R0.prof,2)+'</b></p><div class="stack">'+parts.map(p=>'<i style="width:'+(p[1]/c.price*100)+'%;background:'+p[2]+'"></i>').join('')+'</div><div class="leg">'+parts.map(p=>'<span><i class="dot" style="background:'+p[2]+'"></i>'+p[0]+'</span><span>'+fmt(p[1],2)+'</span>').join('')+'<span><b>'+tl('Prix proposé','Offer price')+'</b></span><span><b>'+fmt(c.price,2)+'</b></span></div><p class="hint">'+tl('En €/MWh, hors acheminement (TURPE ou ATRD), taxes et TVA.','In €/MWh, excluding grid fees, taxes and VAT.')+'</p>'};
+const mcHTML=()=>{if(!S.tools.has('mc'))return '<div class="locked">'+tl('Verrouillé. Choisis l\'outil « Moteur de risque » après un dossier pour voir la distribution complète de ta marge.','Locked. Pick the "Risk engine" tool after a deal to see your full margin distribution.')+'</div>';
+ const d=dist(r(),S.h,S.mk);return '<div class="risk"><div>'+tl('Pire cas 5 %','5% worst')+'<b>'+keur(d.p5)+'</b></div><div>'+tl('Médiane','Median')+'<b>'+keur(d.p50)+'</b></div><div>'+tl('Meilleur 5 %','5% best')+'<b>'+keur(d.p95)+'</b></div><div>'+tl('Proba de perte','Loss odds')+'<b>'+Math.round(d.loss*100)+' %</b></div></div><p class="hint">'+tl('Marge si le client signe, calculée sur les 1 000 combinaisons possibles des trois roues.','Margin if the client signs, computed over all 1,000 combinations of the three wheels.')+'</p>'};
+const curve=()=>{const s=$('curve');if(!s||!S)return;const W=s.clientWidth,H=s.clientHeight;if(!W)return;const R0=r(),h=S.h,mk=S.mk,c0=costs(R0,h,0);
+ const pad=30,x=m=>pad+m/15*(W-pad-8),y=p=>H-20-p*(H-34);let d='';for(let m=0;m<=15;m+=.25){const p=costs(R0,h,m).p;d+=(m?'L':'M')+x(m).toFixed(1)+' '+y(p).toFixed(1)}
+ const eq=c0.C-c0.base;const cp=costs(R0,h,mk).p;
+ let g='<line x1="'+pad+'" x2="'+W+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="#ffffff55"/>';
+ [0,.5,1].forEach(p=>g+='<text x="'+(pad-4)+'" y="'+(y(p)+4)+'" fill="#b9b4d6" font-size="13" text-anchor="end" font-family="VT323">'+Math.round(p*100)+'%</text>');
+ [0,5,10,15].forEach(m=>g+='<text x="'+x(m)+'" y="'+(H-4)+'" fill="#b9b4d6" font-size="13" text-anchor="middle" font-family="VT323">'+m+'</text>');
+ if(eq>0&&eq<15)g+='<line x1="'+x(eq)+'" x2="'+x(eq)+'" y1="8" y2="'+y(0)+'" stroke="#ffffff88" stroke-dasharray="3 3"/><text x="'+Math.min(x(eq)+4,W-110)+'" y="16" fill="#f4f1ff" font-size="14" font-family="VT323">'+tl('prix = concurrence','price = competitors')+'</text>';
+ g+='<path d="'+d+'" fill="none" stroke="var(--a1)" stroke-width="3"/><circle cx="'+x(mk)+'" cy="'+y(cp)+'" r="7" fill="var(--a3)" stroke="#120c22" stroke-width="3"/>';
+ s.innerHTML=g};
+const legendHTML=(segs,i)=>{const rev=revOf(i),seen=new Map();segs.forEach((s,j)=>{const g=seen.get(s.base);if(g){g.n++;g.w+=s.w}else seen.set(s.base,{s,j,n:1,w:s.w})});
+ return '<div class="wl">'+[...seen.values()].map(g=>'<div class="'+(g.s.t||'')+'"><i class="dot" style="background:'+colOf(g.s,g.j,0)+'"></i><span>'+t(g.s.n)+'<br><small>'+[effW,effM,effC][i](g.s)+'</small></span><span>× '+g.n+'<br>'+(rev?Math.round(g.w*100)+' %':'?? %')+'</span></div>').join('')+'</div><p class="hint">'+(rev?tl('Probabilités réelles révélées par ton outil.','True odds revealed by your tool.'):tl('« × 2 » = la case apparaît deux fois sur la roue. Les vraies probabilités restent cachées sans outil.','"× 2" = the slice appears twice on the wheel. True odds stay hidden without a tool.'))+'</p>'};
+const WN=[{fr:'MÉTÉO',en:'WEATHER'},{fr:'MARCHÉ',en:'MARKET'},{fr:'CLIENTS',en:'CLIENTS'}];
+const segsOf=i=>[WX[r().wx],MK,CL][i];
+const revOf=i=>S.tools.has(['py','lake','fc'][i]);
+
+/* stages */
+const stYear=()=>{S.rd=stYear;put('year','<h2>'+tl('TA SAISON COMMENCE','YOUR SEASON STARTS')+'</h2><p>'+tl('Chaque partie est tirée au sort : la conjoncture, la concurrence et 6 dossiers parmi 12. Aucune année ne ressemble à une autre.','Each game is drawn at random: market, competition and 6 deals out of 12. No two years are alike.')+'</p>'+
+ '<div class="evcard"><span class="px">'+t(S.yr.n)+'</span>'+t(S.yr.d)+'</div><div class="evcard alt"><span class="px">'+t(S.cp.n)+'</span>'+t(S.cp.d)+'</div>'+
+ '<h3>'+tl('TES 6 DOSSIERS','YOUR 6 DEALS')+'</h3><ol class="lineup">'+S.deck.map(d=>'<li><span class="season">'+t(d.sea)+'</span> '+t(d.name)+'</li>').join('')+'</ol>'+nav('',tl('PREMIER DOSSIER','FIRST DEAL')));
+ $('nx').onclick=()=>{setPal(0);banner(t(r().sea),tl('DOSSIER 1 : ','DEAL 1: ')+t(r().name).toUpperCase(),stBrief)}};
+const stEvent=ev=>{S.rd=()=>stEvent(ev);put('event','<div class="flash"><span class="px">'+tl('FLASH INFO','NEWS FLASH')+'</span><h2>'+t(ev.n)+'</h2><p>'+t(ev.d)+'</p></div>'+nav('',tl('COMPRIS','GOT IT')));$('nx').onclick=stBrief};
+const stBrief=()=>{S.rd=stBrief;const R0=r();
+ put('brief','<div class="brief"><canvas class="npc" id="npc" width="24" height="24"></canvas><div><span class="season">'+t(R0.sea)+'</span><h2 style="margin-top:10px">'+t(R0.name)+'</h2><div><span class="tag">'+t(R0.who)+'</span>'+R0.tags.map(x=>'<span class="tag">'+t(x)+'</span>').join('')+'</div></div></div><div class="quote">'+t(R0.q)+'</div><p class="hint">'+t(R0.why)+'</p>'+(R0.evt!=null?'<p class="evnote">'+tl('Flash info en cours : ','Active news flash: ')+t(EVT[R0.evt].n)+'</p>':'')+nav('',tl('ÉCOUTER LE MENTOR','HEAR THE MENTOR')));
+ npc(R0.col);$('nx').onclick=stMentor};
+const stMentor=()=>{S.rd=stMentor;const R0=r();
+ put('mentor','<h2>'+tl('LE CARNET DU MENTOR','THE MENTOR\'S NOTEBOOK')+'</h2><p class="hint">'+tl('Il ne te donne jamais la réponse. Il te pose les bonnes questions.','They never give you the answer. They ask the right questions.')+'</p><ul class="qs">'+R0.g.map(q=>'<li>'+t(q)+'</li>').join('')+'</ul><div class="minis"><button class="ghost sm" id="m4">'+tl('COMPRENDRE LE PRIX EN 4 ÉTAPES','THE PRICE IN 4 STEPS')+'</button></div>'+nav(tl('RETOUR','BACK'),tl('AU CHIFFRAGE','TO PRICING')));
+ $('m4').onclick=()=>info(tl('LE PRIX EN 4 ÉTAPES','THE PRICE IN 4 STEPS'),STEPS[L].map((s,i)=>'<div class="step"><b>'+(i+1)+'</b><div><strong>'+s[0]+'</strong><br>'+s[1]+'<br><span class="fml">'+s[2]+'</span></div></div>').join(''));
+ $('bk').onclick=stBrief;$('nx').onclick=stHedge};
+const stHedge=()=>{S.rd=stHedge;
+ put('hedge','<h2>'+tl('ÉTAPE 1 : LA COUVERTURE','STEP 1: HEDGING')+'</h2><p>'+tl('Quelle part de l\'énergie achètes-tu dès maintenant, à prix figé ? Le reste sera acheté au prix du jour pendant l\'année.','How much energy do you buy now, at a locked price? The rest is bought at the day\'s price during the year.')+'</p><div class="ctl"><label><span>'+tl('Part couverte à terme','Share hedged forward')+'</span><b id="vH"></b></label><input type="range" id="iH" min="0" max="100" step="5" value="'+Math.round(S.h*100)+'"></div><div class="tiles" id="tH"></div><p class="hint">'+tl('Indice : couvrir protège du prix, mais si le volume change, l\'écart repasse par le prix du jour.','Hint: hedging protects against price, but if volume changes, the gap goes back through the day\'s price.')+'</p>'+nav(tl('RETOUR','BACK'),tl('ÉTAPE 2 : LE MARK-UP','STEP 2: MARK-UP')));
+ const u=()=>{S.h=+$('iH').value/100;const R0=r();$('vH').textContent=Math.round(S.h*100)+' %';
+  $('tH').innerHTML=tile(tl('Énergie au prix du jour','Energy at the day\'s price'),fmt((1-S.h)*R0.vol,0)+' GWh')+tile(tl('Si le spot monte de 10 %','If spot rises 10%'),'+'+fmt(riskAt(R0,S.h,0,.1),2)+' €/MWh')+tile(tl('Prime de couverture','Hedging premium'),fmt(PRIME*S.h,2)+' €/MWh')};
+ $('iH').oninput=()=>{u();beep(300+ +$('iH').value*8,.02,'square',.02)};u();$('bk').onclick=stMentor;$('nx').onclick=stMarkup};
+const stMarkup=()=>{S.rd=stMarkup;
+ put('markup','<h2>'+tl('ÉTAPE 2 : LE MARK-UP','STEP 2: MARK-UP')+'</h2><p>'+tl('Ta provision pour risques, ajoutée au coût. Plus elle est haute, plus tu es protégé, mais moins le client signe.','Your risk provision, added to cost. Higher protects you more, but the client signs less.')+'</p><div class="ctl"><label><span>Mark-up</span><b id="vM"></b></label><input type="range" id="iM" min="0" max="15" step="0.5" value="'+S.mk+'"></div><div class="price"><span class="px" style="font-size:11px">'+tl('PRIX PROPOSÉ','OFFER PRICE')+'</span><span class="big" id="vP"></span></div><div class="hint" id="vC"></div><div style="margin-top:8px">'+tl('Chance de signature','Chance of signing')+' <b id="vS"></b></div><div class="gauge"><i id="gS"></i></div><div class="fig mini"><svg id="curve"></svg></div><div class="minis"><button class="ghost sm" id="o1">'+tl('PILE DE COÛTS','COST STACK')+'</button><button class="ghost sm" id="o2">'+tl('TESTS DE RÉSISTANCE','STRESS TESTS')+'</button><button class="ghost sm" id="o3">'+tl('MOTEUR DE RISQUE','RISK ENGINE')+(S.tools.has('mc')?'':tl(' (VERROUILLÉ)',' (LOCKED)'))+'</button></div>'+nav(tl('RETOUR','BACK'),tl('ENVOYER L\'OFFRE','SEND THE OFFER')));
+ const u=()=>{S.mk=+$('iM').value;const R0=r(),c=costs(R0,S.h,S.mk);$('vM').textContent=fmt(S.mk)+' €/MWh';$('vP').textContent=fmt(c.price,2)+' €/MWh';$('vC').textContent=tl('Concurrence estimée autour de ','Competitors estimated around ')+fmt(c.C,1)+' €/MWh';
+  const pc=Math.round(c.p*100);$('vS').textContent=pc+' %';$('gS').style.width=pc+'%';$('gS').style.background=pc>60?'var(--ok)':pc>35?'var(--a3)':'var(--ko)';curve()};
+ $('iM').oninput=()=>{u();beep(300+ +$('iM').value*30,.02,'square',.02)};u();requestAnimationFrame(curve);
+ $('o1').onclick=()=>info(tl('PILE DE COÛTS','COST STACK'),stackHTML());
+ $('o2').onclick=()=>{const R0=r();info(tl('TESTS DE RÉSISTANCE','STRESS TESTS'),'<div class="dash">'+dashT(R0,S.h,S.mk,costs(R0,S.h,S.mk))+'</div>')};
+ $('o3').onclick=()=>info(tl('MOTEUR DE RISQUE','RISK ENGINE'),mcHTML());
+ $('bk').onclick=stHedge;$('nx').onclick=()=>{const R0=r(),c=costs(R0,S.h,S.mk);S.cur={h:S.h,mk:S.mk,c,signed:Math.random()<c.p,idx:[null,null,null],o:null,qa:null};S.cur.signed?jingle([523,784,1047]):jingle([392,330,262]);stSign()}};
+const stSign=()=>{S.rd=stSign;const c=S.cur.c,sg=S.cur.signed;
+ put('sign','<div class="stamp '+(sg?'ok':'ko')+'">'+(sg?tl('SIGNÉ !','SIGNED!'):tl('PERDU…','LOST…'))+'</div><p style="text-align:center">'+(sg?tl('Le client accepte '+fmt(c.price,2)+' €/MWh. Voyons si ton mark-up tient toute l\'année.','The client accepts '+fmt(c.price,2)+' €/MWh. Let\'s see if your mark-up survives the year.'):tl('Un concurrent a été préféré. On rejoue quand même l\'année en simulé : c\'est ça, le backtesting.','A competitor was preferred. We still replay the year as a simulation: that is backtesting.'))+'</p><p class="hint" style="text-align:center">'+tl('Trois roues vont décider de ton année : météo, marché, clients.','Three wheels will decide your year: weather, market, clients.')+'</p>'+nav('',tl('LANCER L\'ANNÉE','START THE YEAR')));
+ $('nx').onclick=()=>stWheel(0)};
+const stWheel=i=>{S.rd=()=>{if(!(WH[0]&&WH[0].spin))stWheel(i)};const segs=segsOf(i),eff=[effW,effM,effC][i];
+ put('w'+i,'<h2 style="text-align:center">'+tl('ROUE','WHEEL')+' '+(i+1)+'/3 : '+t(WN[i])+'</h2><p class="hint" style="text-align:center">'+(revOf(i)?tl('Ton outil révèle les vraies probabilités : la taille des cases compte.','Your tool reveals the true odds: slice size matters.'):tl('Sans outil, les 10 cases semblent égales. Les vraies probabilités sont cachées.','Without a tool, all 10 slices look equal. The true odds are hidden.'))+'</p><div class="bigwheel wheel"><canvas id="wc"></canvas></div><div id="land"></div><div class="nav center"><button class="ghost sm" id="lg">'+tl('VOIR LES 10 CASES','SEE THE 10 SLICES')+'</button><button id="sp">SPIN !</button></div>');
+ const w=new Wheel($('wc'),segs,0,revOf(i));WH=[w];
+ $('lg').onclick=()=>info(t(WN[i]),legendHTML(segs,i));
+ const land=()=>{const j=S.cur.idx[i],sg=segs[j];$('land').innerHTML='<div class="landcard '+(sg.t||'')+'"><span class="px">'+t(sg.s)+'</span><b>'+t(sg.n)+'</b><small>'+eff(sg)+'</small></div>';
+  const b=$('sp');b.textContent=i<2?tl('ROUE SUIVANTE','NEXT WHEEL'):tl('VOIR LE BILAN','SEE THE RESULT');b.disabled=false;b.onclick=()=>i<2?stWheel(i+1):stResult();$('land').scrollIntoView({behavior:'smooth',block:'nearest'})};
+ if(S.cur.idx[i]!=null){const j=S.cur.idx[i];w.rot=-Math.PI/2-w.arcs()[j].m;w.hit=j;land();return}
+ $('sp').onclick=async()=>{$('sp').disabled=true;$('lg').disabled=true;const j=pick(segs);await w.go(j,3400);S.cur.idx[i]=j;$('lg').disabled=false;land()}};
+const stResult=()=>{S.rd=stResult;const R0=r();
+ if(!S.cur.o){const sg=[0,1,2].map(i=>segsOf(i)[S.cur.idx[i]]);const o=outcome(R0,S.cur.h,S.cur.mk,sg[0],sg[1],sg[2]);o.ok=o.risk<=S.cur.mk;o.over=S.cur.mk-o.risk>5;S.cur.o=o;
+  S.pl+=S.cur.signed?o.margin:0;S.hist.push({n:R0.name,mk:S.cur.mk,risk:o.risk,signed:S.cur.signed,m:o.margin,ok:o.ok});(o.ok&&!o.over)?jingle([659,784,988,1319]):jingle([330,262,196]);hud()}
+ const o=S.cur.o,mk=S.cur.mk,Fp=costs(R0,S.cur.h,mk).Fp;
+ const verdict=o.ok?(o.over?tl('Couvert avec de la marge : ta provision dépasse nettement le risque de cette année. Sur la durée, un mark-up trop large fait perdre des clients.','Covered with room to spare: your provision clearly exceeds this year\'s risk. Over time, too wide a mark-up loses clients.'):tl('Bien calibré : le mark-up a absorbé le risque réalisé.','Well calibrated: the mark-up absorbed the realised risk.')):tl('Sous-provisionné : le risque réalisé a dépassé ta provision.','Under-provisioned: realised risk exceeded your provision.');
+ put('result','<h2>'+tl('BACKTESTING DU DOSSIER','DEAL BACKTEST')+'</h2><p class="verdict '+(o.ok?'ok':'ko')+'">'+verdict+'</p><div class="tiles">'+tile('Volume',fmt(R0.vol,0)+' → '+fmt(o.V,0)+' GWh')+tile(tl('Prix spot','Spot price'),fmt(Fp,1)+' → '+fmt(o.Sp,1)+' €/MWh')+tile(tl('Mark-up / risque réalisé','Mark-up / realised risk'),fmt(mk,2)+' / <span class="'+(o.ok?'ok':'ko')+'">'+fmt(o.risk,2)+'</span>')+tile(S.cur.signed?tl('Marge du dossier','Deal margin'):tl('Marge simulée','Simulated margin'),'<span class="'+(o.margin>=0?'ok':'ko')+'">'+keur(o.margin)+'</span>')+'</div>'+nav(tl('POURQUOI ?','WHY?'),tl('SUITE','NEXT'),'alt'));
+ $('bk').onclick=stWhy;$('nx').onclick=stQuiz};
+const stWhy=()=>{S.rd=stWhy;put('why','<h2>'+tl('POURQUOI CE RÉSULTAT ?','WHY THIS RESULT?')+'</h2>'+whyT(r(),S.cur.o)+nav(tl('RETOUR','BACK'),tl('SUITE','NEXT')));$('bk').onclick=stResult;$('nx').onclick=stQuiz};
+const stQuiz=()=>{S.rd=stQuiz;const F0=FACT[S.fq[S.r%S.fq.length]],Q=QZ[S.qq[S.r%S.qq.length]];
+ put('quiz','<div class="fact" style="margin-top:0"><span class="px">'+tl('DONNÉE RÉELLE','REAL DATA')+'</span>'+t(F0)+'</div><h3>'+tl('QUESTION DU MANAGER','MANAGER\'S QUESTION')+'</h3><p>'+t(Q.q)+'</p><div class="qopts">'+Q.o.map((x,i)=>'<button data-i="'+i+'">'+t(x)+'</button>').join('')+'</div><p class="hint" id="qx"></p>'+nav('',S.r===5?tl('RAPPORT ANNUEL','ANNUAL REPORT'):tl('DOSSIER SUIVANT','NEXT DEAL')));
+ const bs=[...document.querySelectorAll('.qopts button')];
+ const mark=i=>{bs.forEach(x=>{x.disabled=true;if(+x.dataset.i===Q.a)x.classList.add('good')});if(i!==Q.a)bs[i].classList.add('bad');$('qx').textContent=t(Q.x);$('nx').disabled=false};
+ if(S.cur.qa!=null)mark(S.cur.qa);else $('nx').disabled=true;
+ bs.forEach(b=>b.onclick=()=>{const i=+b.dataset.i;S.cur.qa=i;if(i===Q.a){S.quiz++;beep(988,.15,'triangle')}else beep(160,.2);mark(i)});
+ $('nx').onclick=afterRound};
+const afterRound=()=>{if(S.r===5){report();return}const left=TOOLS.filter(x=>!S.tools.has(x.id));
+ if(left.length){$('upg').innerHTML=left.map(x=>'<button data-id="'+x.id+'">'+t(x.n).toUpperCase()+'<span>'+t(x.d)+'</span></button>').join('');$('mUp').classList.add('on');
+  $('upg').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.tools.add(b.dataset.id);$('mUp').classList.remove('on');jingle([784,988,1175]);nextRound()})}
+ else nextRound()};
+const nextRound=()=>{S.r++;S.h=.6;S.mk=4;S.cur=null;setPal(S.r);const R0=r();let ev=null;
+ if(Math.random()<.75&&S.evs.length){const k=S.evs.pop();ev=EVT[k];ev.a(R0);R0.evt=k}
+ banner(t(R0.sea),tl('DOSSIER ','DEAL ')+(S.r+1)+' : '+t(R0.name).toUpperCase(),()=>ev?stEvent(ev):stBrief())};
+
+$('start').onclick=()=>{beep(660,.1);newGame();show('game');setPal(0);stYear()};
+
+/* ---------- REPORT ---------- */
+const report=()=>{show('report');setPal(0);const H=S.hist,sg=H.filter(h=>h.signed),cal=H.filter(h=>h.ok&&h.mk-h.risk<=5).length;
+ let pts=(S.pl>0?2:0)+(sg.length>=3?1:0)+(cal>=4?2:cal>=2?1:0)+(S.quiz>=5?1:0);
+ const RK=[[{fr:'STAGIAIRE DU FICHIER EXCEL',en:'EXCEL FILE INTERN'},{fr:'Le tableur a gagné cette année. Relis le glossaire et retente ta chance.',en:'The spreadsheet won this year. Read the glossary and try again.'}],
+  [{fr:'ANALYSTE JUNIOR PROMETTEUR',en:'PROMISING JUNIOR ANALYST'},{fr:'Les bases sont là. Encore un peu de calibrage et les commerciaux t\'adoreront.',en:'The basics are there. A bit more calibration and sales will love you.'}],
+  [{fr:'ANALYSTE COSTING CONFIRMÉ',en:'SEASONED COSTING ANALYST'},{fr:'Provisions solides, offres signées : l\'équipe te confie les gros dossiers.',en:'Solid provisions, signed deals: the team trusts you with key accounts.'}],
+  [{fr:'MAÎTRE DU MARK-UP',en:'MARK-UP MASTER'},{fr:'Rentable, compétitif et bien calibré. Le backtesting n\'a rien à te reprocher.',en:'Profitable, competitive and well calibrated. Backtesting has nothing on you.'}]];
+ const rk=RK[pts>=6?3:pts>=4?2:pts>=2?1:0];$('rank').textContent=t(rk[0]);$('rankTxt').textContent=t(rk[1])+' ('+t(S.yr.n)+' · '+t(S.cp.n)+')';jingle([523,659,784,1047,1319]);
+ $('kpis').innerHTML=[[L==='fr'?'P&L annuel':'Annual P&L',keur(S.pl)],[L==='fr'?'Offres signées':'Deals signed',sg.length+'/6'],[L==='fr'?'Bien calibrés':'Well calibrated',cal+'/6'],['Quiz',S.quiz+'/6']].map(k=>'<div>'+k[0]+'<b>'+k[1]+'</b></div>').join('');
+ $('tbl').innerHTML='<table class="stk2"><tr><th>'+(L==='fr'?'Dossier':'Deal')+'</th><th>'+(L==='fr'?'Statut':'Status')+'</th><th>'+(L==='fr'?'Marge':'Margin')+'</th></tr>'+H.map(h=>'<tr><td>'+t(h.n)+'</td><td>'+(h.signed?(L==='fr'?'Signé':'Signed'):(L==='fr'?'Perdu (simulé)':'Lost (simulated)'))+'</td><td class="'+(h.m>=0?'ok':'ko')+'">'+keur(h.m)+'</td></tr>').join('')+'</table>';
+ $('srcs').innerHTML=(L==='fr'?'Ordres de grandeur réels, modèle de jeu simplifié : ':'Real orders of magnitude, simplified game model: ')+'<a href="https://analysesetdonnees.rte-france.com/" target="_blank" rel="noopener">RTE, Bilan électrique 2025</a> · <a href="https://www.edf.fr/entreprises/electricite-gaz/le-benefice-arenh" target="_blank" rel="noopener">EDF Entreprises, VNU</a> · <a href="https://www.cre.fr/" target="_blank" rel="noopener">CRE</a>';
+ chart()};
+const svg=$('chart');
+const chart=()=>{const H=S?S.hist:[];if(!H.length)return;const W=svg.clientWidth,Hh=svg.clientHeight;if(!W)return;const pad=34,mx=Math.max(6,...H.map(h=>Math.max(h.mk,Math.abs(h.risk))))*1.15;
+ const bw=(W-pad-10)/H.length,y0=Hh/2,sc=(Hh/2-24)/mx;let s='<line x1="'+pad+'" x2="'+W+'" y1="'+y0+'" y2="'+y0+'" stroke="#ffffff66"/>';
+ [mx*.5,-mx*.5].forEach(v=>{s+='<text x="'+(pad-4)+'" y="'+(y0-v*sc+4)+'" fill="#b9b4d6" font-size="14" text-anchor="end" font-family="VT323">'+Math.round(v)+'</text>'});
+ H.forEach((h,i)=>{const x=pad+i*bw+bw*.15,w=bw*.33;const b=(v,xx,c)=>{const hh=Math.abs(v)*sc;s+='<rect x="'+xx+'" y="'+(v>=0?y0-hh:y0)+'" width="'+w+'" height="'+hh+'" fill="'+c+'" opacity="'+(h.signed?1:.5)+'"/>'};
+  b(h.mk,x,'#39d0ff');b(h.risk,x+w+2,h.ok?'#7cff6b':'#ff4d6d');s+='<text x="'+(x+w)+'" y="'+(Hh-6)+'" fill="#f4f1ff" font-size="15" text-anchor="middle" font-family="VT323">D'+(i+1)+(h.signed?'':'*')+'</text>'});
+ s+='<rect x="'+(pad+6)+'" y="4" width="10" height="10" fill="#39d0ff"/><text x="'+(pad+20)+'" y="13" fill="#f4f1ff" font-size="15" font-family="VT323">'+(L==='fr'?'Mark-up':'Mark-up')+'</text><rect x="'+(pad+90)+'" y="4" width="10" height="10" fill="#7cff6b"/><text x="'+(pad+104)+'" y="13" fill="#f4f1ff" font-size="15" font-family="VT323">'+(L==='fr'?'Risque réalisé':'Realised risk')+'</text>';
+ svg.innerHTML=s};
+const ro=new ResizeObserver(chart);ro.observe(svg);
+window.addEventListener('resize',()=>{WH.forEach(w=>w.size());curve()});
+
+/* ---------- MISC UI ---------- */
+$('again').onclick=()=>{show('title');setPal(0)};
+$('langBtn').onclick=()=>{L=L==='fr'?'en':'fr';applyLang();beep(700,.06)};
+const open=id=>{$(id).classList.add('on');beep(600,.05)};
+$('howBtn').onclick=()=>open('mHow');['glossBtn','g2','g3'].forEach(i=>$(i).onclick=()=>open('mGl'));
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('on'));
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m&&m.id!=='mUp')m.classList.remove('on')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal.on').forEach(m=>{if(m.id!=='mUp')m.classList.remove('on')})});
+$('gq').oninput=glT;
+$('snd').onclick=()=>{SND=!SND;$('snd').textContent=SND?'SON ON':'SON OFF'};
+$('start').onmouseenter=()=>beep(1200,.03,'square',.02);
+reset();applyLang();
+}
+</script>
+</body>
+</html>
